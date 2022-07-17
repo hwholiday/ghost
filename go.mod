@@ -5,7 +5,6 @@ go 1.18
 require (
 	github.com/gin-gonic/gin v1.8.1
 	github.com/google/uuid v1.3.0
-	github.com/hwholiday/learning_tools v1.0.0
 	github.com/natefinch/lumberjack v2.0.0+incompatible
 	go.uber.org/zap v1.21.0
 )
