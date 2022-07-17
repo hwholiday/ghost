@@ -1,4 +1,4 @@
-module ghost
+module github.com/hwholiday/ghost
 
 go 1.18
 
