@@ -100,9 +100,10 @@ func (l *Logger) GetLevel() (level zapcore.Level) {
 
 func (l *Logger) loadCfg() {
 	l.zapConfig = zap.NewProductionConfig()
-	if l.opts.Development {
+	switch l.opts.PrintTime {
+	case PrintTimeFormat:
 		l.zapConfig.EncoderConfig.EncodeTime = timeEncoder
-	} else {
+	case PrintTimestamp:
 		l.zapConfig.EncoderConfig.EncodeTime = timeUnixNano
 	}
 }

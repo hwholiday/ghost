@@ -23,8 +23,7 @@ func AddTraceId() gin.HandlerFunc {
 
 // curl http://127.0.0.1:8888/test
 func main() {
-	hlog.NewLogger(
-		hlog.SetDevelopment(false))
+	hlog.NewLogger(hlog.SetPrintTime(hlog.PrintTimestamp))
 	g := gin.New()
 	g.Use(AddTraceId())
 	g.GET("/test", func(context *gin.Context) {
@@ -38,7 +37,3 @@ func main() {
 }
 
 // curl http://127.0.0.1:8888/test
-//{"L":"INFO","T":"2021-12-14T11:12:24.916+0800","C":"example/main.go:35","M":"hconf example success"}
-//{"L":"INFO","T":"2021-12-14T11:12:29.179+0800","C":"example/main.go:19","M":"AddTraceId success","traceId":"e92b1a38-f9ce-4d1a-8f40-c88caf735844"}
-//{"L":"INFO","T":"2021-12-14T11:12:29.179+0800","C":"example/main.go:31","M":"test","traceId":"e92b1a38-f9ce-4d1a-8f40-c88caf735844"}
-//{"L":"DEBUG","T":"2021-12-14T11:12:29.179+0800","C":"example/main.go:32","M":"test","traceId":"e92b1a38-f9ce-4d1a-8f40-c88caf735844"}

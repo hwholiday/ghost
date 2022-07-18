@@ -1,15 +1,10 @@
-# 封装 zap 日志注入 trace 信息 Trace Id（内含 gin 例子）
 
-### [hlog](https://github.com/hwholiday/learning_tools/tree/master/hlog) (源码地址)
-
-- 实现自动切割文件 (基于 lumberjack 实现)
-- 实现可传递 trace 信息 （基于 Context 实现）
 
 ###   
 
 #### 配置
 
-- Development bool // 是否开发模式
+- PrintTime TimeFormat // 打印的时间格式
 - LogFileDir string // 日志路径
 - AppName string // APP名字
 - MaxSize int //文件多大开始切分
@@ -57,8 +52,9 @@ func (l *Logger) AddCtx(ctx context.Context, field ...zap.Field) (context.Contex
 hlog.NewLogger()
 hlog.GetLogger().Info("hconf example success")
 
-{"L":"INFO","T":"2021-12-14T11:43:13.276+0800","C":"hlog/zap.go:34","M":"[initLogger] zap plugin initializing completed"}
-{"L":"INFO","T":"2021-12-14T11:43:13.277+0800","C":"hlog/zap_test.go:12","M":"hconf example success"}
+{"level":"info","ts":"2022-07-18 23:29:02","caller":"hlog/zap.go:36","msg":"[initLogger] zap plugin initializing completed"}
+{"level":"info","ts":"2022-07-18 23:29:02","caller":"hlog/zap_test.go:12","msg":"hconf example success"}
+
 ```
 
 #### 例子（gin）
@@ -89,23 +85,22 @@ hlog.NewLogger()
 
 curl http://127.0.0.1:8888/test
 
-{"L":"INFO","T":"2021-12-14T11:46:00.170+0800","C":"example/main.go:35","M":"hconf example success"}
-{"L":"INFO","T":"2021-12-14T11:46:03.956+0800","C":"example/main.go:19","M":"AddTraceId success","traceId":"b1471a7c-5ae8-4bfd-bbdc-5312e072719c"}
-{"L":"INFO","T":"2021-12-14T11:46:03.956+0800","C":"example/main.go:31","M":"test","traceId":"b1471a7c-5ae8-4bfd-bbdc-5312e072719c"}
-{"L":"DEBUG","T":"2021-12-14T11:46:03.956+0800","C":"example/main.go:32","M":"test","traceId":"b1471a7c-5ae8-4bfd-bbdc-5312e072719c"}
+{"level":"info","ts":"2022-07-18 23:48:16","caller":"example/main.go:35","msg":"hconf example success"}
+{"level":"info","ts":"2022-07-18 23:48:21","caller":"example/main.go:19","msg":"AddTraceId success","traceId":"c7cd8bed-10d8-449b-ab17-338ff2651463"}
+{"level":"info","ts":"2022-07-18 23:48:21","caller":"example/main.go:31","msg":"test","traceId":"c7cd8bed-10d8-449b-ab17-338ff2651463"}
+{"level":"debug","ts":"2022-07-18 23:48:21","caller":"example/main.go:32","msg":"test","traceId":"c7cd8bed-10d8-449b-ab17-338ff2651463"}
+
 ```
 
 #### 例子（gin）生产模式
 
 ```base
-hlog.NewLogger(
-	hlog.SetDevelopment(false))
+hlog.NewLogger(hlog.SetPrintTime(hlog.PrintTimestamp))
 
 curl http://127.0.0.1:8888/test
-	
-{"level":"info","ts":1639453661.4718382,"caller":"example/main.go:36","msg":"hconf example success"}
-{"level":"info","ts":1639453664.7402327,"caller":"example/main.go:19","msg":"AddTraceId success","traceId":"68867b89-c949-45a4-b325-86866c9f869a"}
-{"level":"info","ts":1639453664.7402515,"caller":"example/main.go:32","msg":"test","traceId":"68867b89-c949-45a4-b325-86866c9f869a"}
-{"level":"debug","ts":1639453664.7402549,"caller":"example/main.go:33","msg":"test","traceId":"68867b89-c949-45a4-b325-86866c9f869a"}
-		
+
+{"level":"info","ts":1658159389991,"caller":"example/main.go:35","msg":"hconf example success"}
+{"level":"info","ts":1658159391161,"caller":"example/main.go:19","msg":"AddTraceId success","traceId":"c304cdb9-7d54-4d79-9c33-691cfc868d3c"}
+{"level":"info","ts":1658159391161,"caller":"example/main.go:31","msg":"test","traceId":"c304cdb9-7d54-4d79-9c33-691cfc868d3c"}
+{"level":"debug","ts":1658159391161,"caller":"example/main.go:32","msg":"test","traceId":"c304cdb9-7d54-4d79-9c33-691cfc868d3c"}
 ```

@@ -2,8 +2,15 @@ package hlog
 
 import "path/filepath"
 
+type TimeFormat int
+
+const (
+	PrintTimeFormat = iota //"2006-01-02 15:04:05"
+	PrintTimestamp         //毫秒时间戳
+)
+
 type Options struct {
-	Development  bool //只会改变时间打印格式（测试环境输出为格式化时间，正式环境输出为毫秒时间戳）
+	PrintTime    TimeFormat
 	LogFileDir   string
 	AppName      string
 	MaxSize      int //文件多大开始切分
@@ -19,7 +26,7 @@ type HLogOptions func(*Options)
 
 func newOptions(opts ...HLogOptions) *Options {
 	opt := &Options{
-		Development:  true,
+		PrintTime:    PrintTimeFormat,
 		AppName:      "hlog-app",
 		MaxSize:      100,
 		MaxBackups:   60,
@@ -37,9 +44,9 @@ func newOptions(opts ...HLogOptions) *Options {
 	return opt
 }
 
-func SetDevelopment(development bool) HLogOptions {
+func SetPrintTime(t TimeFormat) HLogOptions {
 	return func(options *Options) {
-		options.Development = development
+		options.PrintTime = t
 	}
 }
 
