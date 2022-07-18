@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/natefinch/lumberjack"
 	"go.uber.org/zap"
@@ -98,12 +99,11 @@ func (l *Logger) GetLevel() (level zapcore.Level) {
 }
 
 func (l *Logger) loadCfg() {
+	l.zapConfig = zap.NewProductionConfig()
 	if l.opts.Development {
-		l.zapConfig = zap.NewDevelopmentConfig()
-		//l.zapConfig.EncoderConfig.EncodeTime = timeEncoder
+		l.zapConfig.EncoderConfig.EncodeTime = timeEncoder
 	} else {
-		l.zapConfig = zap.NewProductionConfig()
-		//l.zapConfig.EncoderConfig.EncodeTime = timeUnixNano
+		l.zapConfig.EncoderConfig.EncodeTime = timeUnixNano
 	}
 }
 
@@ -141,10 +141,10 @@ func (l *Logger) cores() zap.Option {
 }
 
 // 可自定义时间
-//func timeEncoder(t time.Time, enc zapcore.PrimitiveArrayEncoder) {
-//	enc.AppendString(t.Format("2006-01-02 15:04:05"))
-//}
-//
-//func timeUnixNano(t time.Time, enc zapcore.PrimitiveArrayEncoder) {
-//	enc.AppendInt64(t.UnixNano() / 1e6)
-//}
+func timeEncoder(t time.Time, enc zapcore.PrimitiveArrayEncoder) {
+	enc.AppendString(t.Format("2006-01-02 15:04:05"))
+}
+
+func timeUnixNano(t time.Time, enc zapcore.PrimitiveArrayEncoder) {
+	enc.AppendInt64(t.UnixNano() / 1e6)
+}

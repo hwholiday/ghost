@@ -3,7 +3,7 @@ package hlog
 import "path/filepath"
 
 type Options struct {
-	Development  bool
+	Development  bool //只会改变时间打印格式（测试环境输出为格式化时间，正式环境输出为毫秒时间戳）
 	LogFileDir   string
 	AppName      string
 	MaxSize      int //文件多大开始切分
