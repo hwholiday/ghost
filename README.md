@@ -4,4 +4,5 @@
 
 # [tool](https://github.com/hwholiday/ghost/tree/main/tool) 基础工具类
    - [signal](https://github.com/hwholiday/ghost/tree/main/tool/signal.go) 优雅的退出程序，并回收资源 
+   - [aes](https://github.com/hwholiday/ghost/tree/main/tool/aes.go) AES-(128,192,256)-(CFB,CBC,ECB)加密
   
