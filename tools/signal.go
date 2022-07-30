@@ -1,4 +1,4 @@
-package tool
+package tools
 
 import (
 	"fmt"
@@ -7,7 +7,7 @@ import (
 	"syscall"
 )
 
-func QuitSignal(quitFunc func()) {
+func SignalQuit(quitFunc func()) {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 	fmt.Printf("server start success pid:%d\n", os.Getpid())

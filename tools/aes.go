@@ -1,4 +1,4 @@
-package tool
+package tools
 
 import (
 	"bytes"
@@ -17,11 +17,11 @@ var (
 	KeyIsEmpty   = errors.New("aes key is empty")
 )
 
+// SetAesKey AES128 AES192  AES256 位的其中一个 长度 对应分别是 16  24  32字节长度
 func SetAesKey(key string) (err error) {
 	syncAesMutex.Lock()
 	defer syncAesMutex.Unlock()
 	b := []byte(key)
-	////128 192  256位的其中一个 长度 对应分别是 16 24  32字节长度
 	if len(b) == 16 || len(b) == 24 || len(b) == 32 {
 		commonAeskey = b
 		return nil
