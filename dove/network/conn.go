@@ -1,4 +1,4 @@
-package conn
+package network
 
 import (
 	"net"
@@ -9,7 +9,7 @@ const (
 	Identity = "identity" // 链接的UUID
 )
 
-type Client interface {
+type Conn interface {
 	Conn() net.Conn
 	Read() (byt []byte, err error)
 	Write(byt []byte) error

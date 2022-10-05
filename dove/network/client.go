@@ -1,4 +1,4 @@
-package conn
+package network
 
 import (
 	"bufio"
@@ -12,12 +12,12 @@ import (
 )
 
 var (
-	_               Client = (*Conn)(nil)
-	AlreadyCloseErr        = errors.New("conn already close")
+	_               Conn = (*conn)(nil)
+	AlreadyCloseErr      = errors.New("conn already close")
 )
 
-// Conn length + data 模式
-type Conn struct {
+// conn length + data 模式
+type conn struct {
 	opts       *options
 	readWriter *bufio.ReadWriter
 	cache      sync.Map
@@ -27,7 +27,7 @@ type Conn struct {
 	once       sync.Once
 }
 
-func NewConnClient(opt ...Option) (Client, error) {
+func NewConn(opt ...Option) (Conn, error) {
 	var (
 		err error
 		c   = getConn()
@@ -48,7 +48,7 @@ func NewConnClient(opt ...Option) (Client, error) {
 	go c.witerChannel()
 	return c, nil
 }
-func (c *Conn) Close() {
+func (c *conn) Close() {
 	c.once.Do(func() {
 		c.stopChan <- true
 		close(c.stopChan)
@@ -59,7 +59,7 @@ func (c *Conn) Close() {
 	})
 }
 
-func (c *Conn) Read() (byt []byte, err error) {
+func (c *conn) Read() (byt []byte, err error) {
 	select {
 	case byt = <-c.readChan:
 		return byt, nil
@@ -68,22 +68,22 @@ func (c *Conn) Read() (byt []byte, err error) {
 	}
 }
 
-func (c *Conn) SaveCache(k string, v any) {
+func (c *conn) SaveCache(k string, v any) {
 	c.cache.Store(k, v)
 }
 
-func (c *Conn) GetCache(k string) (v any, ok bool) {
+func (c *conn) GetCache(k string) (v any, ok bool) {
 	return c.cache.Load(k)
 }
 
-func (c *Conn) Conn() net.Conn {
+func (c *conn) Conn() net.Conn {
 	return c.opts.conn
 }
-func (c *Conn) ResetConnDeadline() error {
+func (c *conn) ResetConnDeadline() error {
 	return c.opts.conn.SetDeadline(time.Now().Add(time.Duration(c.opts.HeartbeatInterval) * time.Second))
 }
 
-func (c *Conn) GetCacheString(k string) string {
+func (c *conn) GetCacheString(k string) string {
 	v, ok := c.cache.Load(k)
 	if !ok {
 		return ""
@@ -95,7 +95,7 @@ func (c *Conn) GetCacheString(k string) string {
 	return vStr
 }
 
-func (c *Conn) Write(byt []byte) error {
+func (c *conn) Write(byt []byte) error {
 	select {
 	case c.writerChan <- byt:
 	case <-c.stopChan:
@@ -104,7 +104,7 @@ func (c *Conn) Write(byt []byte) error {
 	return nil
 }
 
-func (c *Conn) readChannel() {
+func (c *conn) readChannel() {
 	for {
 		byt, err := c.read()
 		if err != nil {
@@ -123,7 +123,7 @@ func (c *Conn) readChannel() {
 	}
 }
 
-func (c *Conn) witerChannel() {
+func (c *conn) witerChannel() {
 	for {
 		select {
 		case byt := <-c.writerChan:
@@ -136,7 +136,7 @@ func (c *Conn) witerChannel() {
 	}
 }
 
-func (c *Conn) read() ([]byte, error) {
+func (c *conn) read() ([]byte, error) {
 	lengthByte, err := c.readWriter.Reader.Peek(c.opts.length)
 	if err != nil {
 		return nil, err
@@ -157,7 +157,7 @@ func (c *Conn) read() ([]byte, error) {
 	return pack[c.opts.length:], err
 }
 
-func (c *Conn) witer(byt []byte) error {
+func (c *conn) witer(byt []byte) error {
 	var (
 		length = len(byt)
 	)

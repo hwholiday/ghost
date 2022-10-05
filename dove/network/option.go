@@ -1,4 +1,4 @@
-package conn
+package network
 
 import (
 	"encoding/binary"

@@ -1,7 +1,8 @@
-package conn
+package dove
 
 import (
 	"errors"
+	"github.com/hwholiday/ghost/dove/network"
 	"sync"
 	"sync/atomic"
 )
@@ -18,13 +19,13 @@ func Manager() *manager {
 	return &manager{}
 }
 
-func (m *manager) Add(identity string, conn Client) error {
+func (m *manager) Add(identity string, conn network.Conn) error {
 	if m.GetConnNum() >= m.maxConn {
 		return ErrExceedsLengthLimit
 	}
 	if old, ok := m.GetConn(identity); ok {
 		//关闭老的链接信息，这里可能是异地登陆
-		old.(Client).Close()
+		old.(network.Conn).Close()
 		m.Del(identity)
 	}
 	m.connMap.Store(identity, conn)
@@ -44,18 +45,18 @@ func (m *manager) GetConnNum() uint32 {
 	return atomic.LoadUint32(&m.connNum)
 }
 
-func (m *manager) GetConn(identity string) (Client, bool) {
+func (m *manager) GetConn(identity string) (network.Conn, bool) {
 	val, ok := m.connMap.Load(identity)
 	if !ok {
 		return nil, false
 	}
-	return val.(Client), true
+	return val.(network.Conn), true
 }
 
-func (m *manager) GetAllConn() []Client {
-	var clientArr = make([]Client, 0, m.GetConnNum())
+func (m *manager) GetAllConn() []network.Conn {
+	var clientArr = make([]network.Conn, 0, m.GetConnNum())
 	m.connMap.Range(func(key, value any) bool {
-		clientArr = append(clientArr, value.(Client))
+		clientArr = append(clientArr, value.(network.Conn))
 		return true
 	})
 	return clientArr
