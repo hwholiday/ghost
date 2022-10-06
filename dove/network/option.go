@@ -46,8 +46,8 @@ func newOptions(opts ...Option) (*options, error) {
 		id:                uuid.New().String(),
 		witerBufferSize:   4096,
 		readBufferSize:    4096,
-		witerChanLen:      10,
-		readChanLen:       10,
+		witerChanLen:      1,
+		readChanLen:       1,
 		HeartbeatInterval: 30,
 		useBigEndian:      true,
 	}

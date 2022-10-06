@@ -13,9 +13,6 @@ type Conn interface {
 	Conn() net.Conn
 	Read() (byt []byte, err error)
 	Write(byt []byte) error
-	SaveCache(k string, v any)
-	GetCache(k string) (v any, ok bool)
-	GetCacheString(k string) string
-	ResetConnDeadline() error
+	Cache() *Cache
 	Close()
 }
