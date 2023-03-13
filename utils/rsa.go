@@ -1,4 +1,4 @@
-package tools
+package utils
 
 import (
 	"crypto"
@@ -94,7 +94,7 @@ func RsaSign(privateKeyBytes, signContent []byte, h ...crypto.Hash) ([]byte, err
 	return rsa.SignPKCS1v15(rand.Reader, privateKey, cryptoNew, hashed)
 }
 
-//RsaVerifySign 签名校验
+// RsaVerifySign 签名校验
 // signContent 签名的byte数据
 // publicKeyBytes 公钥
 // sign 签名

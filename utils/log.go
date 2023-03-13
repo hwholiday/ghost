@@ -1,11 +1,11 @@
-package tools
+package utils
 
 import (
 	"github.com/rs/zerolog"
 	"time"
 )
 
-func LogGlobalConf(development bool) {
+func SetUpGlobalLogConf(development bool) {
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
 	zerolog.SetGlobalLevel(zerolog.InfoLevel)
 	if development {

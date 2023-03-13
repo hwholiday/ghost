@@ -1,4 +1,4 @@
-package tools
+package utils
 
 import (
 	"github.com/rs/zerolog/log"
@@ -6,8 +6,8 @@ import (
 )
 
 func Test_Log(t *testing.T) {
-	LogGlobalConf(true)
+	SetUpGlobalLogConf(true)
 	log.Info().Any("test", 11).Msg("data")
-	LogGlobalConf(false)
+	SetUpGlobalLogConf(false)
 	log.Info().Any("test", 11).Msg("data")
 }

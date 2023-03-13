@@ -1,4 +1,4 @@
-package tools
+package utils
 
 func InIntArr(in int, arr []int) bool {
 	for _, v := range arr {
