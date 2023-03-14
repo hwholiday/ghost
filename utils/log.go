@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-func SetUpGlobalLogConf(development bool) {
+func SetUpGlobalZeroLogConf(development bool) {
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
 	zerolog.SetGlobalLevel(zerolog.InfoLevel)
 	if development {

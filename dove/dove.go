@@ -10,14 +10,6 @@ import (
 	"sync"
 )
 
-const (
-	DefaultWsPort = ":8081"
-)
-const (
-	DefaultConnAcceptCrcId uint64 = 1
-	DefaultConnCloseCrcId  uint64 = 2
-)
-
 type HandleFunc func(cli network.Conn, reqData interface{})
 
 type Dove interface {
@@ -36,6 +28,7 @@ func NewDove() Dove {
 		manger:        Manager(),
 		HandleFuncMap: make(map[uint64]HandleFunc),
 	}
+	setup()
 	return &h
 }
 

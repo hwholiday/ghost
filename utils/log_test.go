@@ -6,8 +6,8 @@ import (
 )
 
 func Test_Log(t *testing.T) {
-	SetUpGlobalLogConf(true)
+	SetUpGlobalZeroLogConf(true)
 	log.Info().Any("test", 11).Msg("data")
-	SetUpGlobalLogConf(false)
+	SetUpGlobalZeroLogConf(false)
 	log.Info().Any("test", 11).Msg("data")
 }
