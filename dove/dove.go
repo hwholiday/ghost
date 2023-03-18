@@ -10,7 +10,7 @@ import (
 	"sync"
 )
 
-type HandleFunc func(cli network.Conn, reqData interface{})
+type HandleFunc func(cli network.Conn, data *api.Dove)
 
 type Dove interface {
 	RegisterHandleFunc(id uint64, fn HandleFunc)
@@ -53,13 +53,13 @@ func (h *dove) RegisterHandleFunc(id uint64, fn HandleFunc) {
 	h.HandleFuncMap[id] = fn
 }
 
-func (h *dove) triggerHandle(client network.Conn, id uint64, req []byte) {
+func (h *dove) triggerHandle(client network.Conn, id uint64, data *api.Dove) {
 	fn, ok := h.HandleFuncMap[id]
 	if !ok {
-		log.Printf("[Dove] accept HandleFuncMap not register id : %d \n", req)
+		log.Printf("[Dove] accept HandleFuncMap not register id : %d \n", id)
 		return
 	}
-	fn(client, req)
+	fn(client, data)
 }
 
 func (h *dove) Accept(conn net.Conn) error {
@@ -86,7 +86,7 @@ func (h *dove) Accept(conn net.Conn) error {
 				log.Printf("[Dove] Accept parseByt  %s \n", err.Error())
 				continue
 			}
-			h.triggerHandle(client, req.GetHeader().GetCrcId(), req.GetBody().GetData())
+			h.triggerHandle(client, req.GetMetadata().GetCrcId(), req)
 		}
 	}()
 	return nil
