@@ -14,6 +14,7 @@ import (
 var (
 	_               Conn = (*conn)(nil)
 	AlreadyCloseErr      = errors.New("conn already close")
+	MayBeCloseErr        = errors.New("conn may be closed or request data format error")
 )
 
 // conn length + data 模式
@@ -96,7 +97,7 @@ func (c *conn) readChannel() {
 		byt, err := c.read()
 		if err != nil {
 			if !errors.Is(err, AlreadyCloseErr) {
-				log.Printf("[Dove] readChannel Close conn id : %s , err: %s \n", c.opts.id, err.Error())
+				log.Printf("[Dove] readChannel Close conn id : %s , err: %s ", c.opts.id, err.Error())
 			}
 			c.Close()
 			return
@@ -117,7 +118,7 @@ func (c *conn) witerChannel() {
 		select {
 		case byt := <-c.writerChan:
 			if err := c.witer(byt); err != nil {
-				log.Printf("[Dove] witerChannel id : %s , err: %s \n", c.opts.id, err.Error())
+				log.Printf("[Dove] witerChannel id : %s , err: %s ", c.opts.id, err.Error())
 			}
 		case <-c.stopChan:
 			return
@@ -132,7 +133,7 @@ func (c *conn) read() ([]byte, error) {
 	}
 	var length int
 	if err = binary.Read(bytes.NewReader(lengthByte), c.opts.endian, &length); err != nil {
-		return nil, AlreadyCloseErr
+		return nil, MayBeCloseErr
 	}
 
 	if c.readWriter.Reader.Buffered() < int(c.opts.length+length) {

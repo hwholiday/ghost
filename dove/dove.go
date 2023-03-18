@@ -35,7 +35,7 @@ func (h *dove) RegisterHandleFunc(id uint64, fn HandleFunc) {
 	h.rw.Lock()
 	defer h.rw.Unlock()
 	if _, ok := h.HandleFuncMap[id]; ok {
-		log.Printf("[Dove] RegisterHandleFunc already register id : %d \n", id)
+		log.Printf("[Dove] RegisterHandleFunc already register id : %d ", id)
 		return
 	}
 	h.HandleFuncMap[id] = fn
@@ -44,7 +44,7 @@ func (h *dove) RegisterHandleFunc(id uint64, fn HandleFunc) {
 func (h *dove) triggerHandle(client network.Conn, id uint64, data *api.Dove) {
 	fn, ok := h.HandleFuncMap[id]
 	if !ok {
-		log.Printf("[Dove] accept HandleFuncMap not register id : %d \n", id)
+		log.Printf("[Dove] accept HandleFuncMap not register id : %d ", id)
 		return
 	}
 	fn(client, data)
@@ -53,7 +53,7 @@ func (h *dove) triggerHandle(client network.Conn, id uint64, data *api.Dove) {
 func (h *dove) Accept(opt ...network.Option) error {
 	client, err := network.NewConn(opt...)
 	if err != nil {
-		log.Printf("[Dove] Accept NewConn  %s \n", err.Error())
+		log.Printf("[Dove] Accept NewConn  %s ", err.Error())
 		return err
 	}
 	if err = h.manger.Add(client.Cache().Get(network.Identity).String(), client); err != nil {
@@ -67,13 +67,13 @@ func (h *dove) Accept(opt ...network.Option) error {
 				h.manger.Del(client.Cache().Get(network.Identity).String())
 				h.triggerHandle(client, DefaultConnCloseCrcId, nil)
 				if !errors.Is(err, network.AlreadyCloseErr) {
-					log.Printf("[Dove] Accept Read  %s \n", err.Error())
+					log.Printf("[Dove] Accept Read  %s ", err.Error())
 				}
 				return
 			}
 			req, err := parseByt(byt)
 			if err != nil {
-				log.Printf("[Dove] Accept parseByt  %s \n", err.Error())
+				log.Printf("[Dove] Accept parseByt  %s ", err.Error())
 				continue
 			}
 			h.triggerHandle(client, req.GetMetadata().GetCrcId(), req)
