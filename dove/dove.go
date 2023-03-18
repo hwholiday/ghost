@@ -6,7 +6,6 @@ import (
 	api "github.com/hwholiday/ghost/dove/api/dove"
 	"github.com/hwholiday/ghost/dove/network"
 	"github.com/rs/zerolog/log"
-	"net"
 	"sync"
 )
 
@@ -14,7 +13,7 @@ type HandleFunc func(cli network.Conn, data *api.Dove)
 
 type Dove interface {
 	RegisterHandleFunc(id uint64, fn HandleFunc)
-	Accept(conn net.Conn) error
+	Accept(opt ...network.Option) error
 }
 
 type dove struct {
@@ -32,18 +31,7 @@ func NewDove() Dove {
 	return &h
 }
 
-func (h *dove) verifyID(id uint64) error {
-	if id == DefaultConnCloseCrcId || id == DefaultConnAcceptCrcId {
-		return errors.New("please don't use default id")
-	}
-	return nil
-}
-
 func (h *dove) RegisterHandleFunc(id uint64, fn HandleFunc) {
-	if err := h.verifyID(id); err != nil {
-		log.Printf("[Dove] RegisterHandleFunc : %s \n", err.Error())
-		return
-	}
 	h.rw.Lock()
 	defer h.rw.Unlock()
 	if _, ok := h.HandleFuncMap[id]; ok {
@@ -62,8 +50,8 @@ func (h *dove) triggerHandle(client network.Conn, id uint64, data *api.Dove) {
 	fn(client, data)
 }
 
-func (h *dove) Accept(conn net.Conn) error {
-	client, err := network.NewConn(network.WithConn(conn))
+func (h *dove) Accept(opt ...network.Option) error {
+	client, err := network.NewConn(opt...)
 	if err != nil {
 		log.Printf("[Dove] Accept NewConn  %s \n", err.Error())
 		return err
@@ -78,7 +66,9 @@ func (h *dove) Accept(conn net.Conn) error {
 			if err != nil {
 				h.manger.Del(client.Cache().Get(network.Identity).String())
 				h.triggerHandle(client, DefaultConnCloseCrcId, nil)
-				log.Printf("[Dove] Accept Read  %s \n", err.Error())
+				if !errors.Is(err, network.AlreadyCloseErr) {
+					log.Printf("[Dove] Accept Read  %s \n", err.Error())
+				}
 				return
 			}
 			req, err := parseByt(byt)

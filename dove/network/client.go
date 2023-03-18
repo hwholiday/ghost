@@ -21,7 +21,7 @@ type conn struct {
 	opts       *options
 	readWriter *bufio.ReadWriter
 	cache      *Cache
-	stopChan   chan bool
+	stopChan   chan struct{}
 	writerChan chan []byte
 	readChan   chan []byte
 	once       sync.Once
@@ -40,7 +40,7 @@ func NewConn(opt ...Option) (Conn, error) {
 	c.readWriter = bufio.NewReadWriter(
 		bufio.NewReaderSize(c.opts.conn, c.opts.readBufferSize),
 		bufio.NewWriterSize(c.opts.conn, c.opts.witerBufferSize))
-	c.stopChan = make(chan bool)
+	c.stopChan = make(chan struct{})
 	c.cache = NewCache()
 	c.writerChan = make(chan []byte, c.opts.readChanLen)
 	c.readChan = make(chan []byte, c.opts.witerChanLen)
@@ -57,12 +57,12 @@ func (c *conn) Cache() *Cache {
 
 func (c *conn) Close() {
 	c.once.Do(func() {
-		c.stopChan <- true
+		_ = c.opts.conn.Close()
+		putConn(c)
+		c.stopChan <- struct{}{}
 		close(c.stopChan)
 		close(c.readChan)
 		close(c.writerChan)
-		_ = c.opts.conn.Close()
-		putConn(c)
 	})
 }
 
@@ -95,11 +95,15 @@ func (c *conn) readChannel() {
 	for {
 		byt, err := c.read()
 		if err != nil {
-			log.Printf("[Dove] readChannel Close conn id : %s , err: %s \n", c.opts.id, err.Error())
+			if !errors.Is(err, AlreadyCloseErr) {
+				log.Printf("[Dove] readChannel Close conn id : %s , err: %s \n", c.opts.id, err.Error())
+			}
 			c.Close()
 			return
 		}
-		_ = c.ResetConnDeadline()
+		if c.opts.autoHeartbeat {
+			_ = c.ResetConnDeadline()
+		}
 		select {
 		case c.readChan <- byt:
 		case <-c.stopChan:
@@ -116,7 +120,7 @@ func (c *conn) witerChannel() {
 				log.Printf("[Dove] witerChannel id : %s , err: %s \n", c.opts.id, err.Error())
 			}
 		case <-c.stopChan:
-			break
+			return
 		}
 	}
 }
@@ -128,7 +132,7 @@ func (c *conn) read() ([]byte, error) {
 	}
 	var length int
 	if err = binary.Read(bytes.NewReader(lengthByte), c.opts.endian, &length); err != nil {
-		return nil, err
+		return nil, AlreadyCloseErr
 	}
 
 	if c.readWriter.Reader.Buffered() < int(c.opts.length+length) {

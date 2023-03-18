@@ -20,6 +20,11 @@ const (
 
 var doveMode = ReleaseMode
 
+var DefaultConnMax int64 = 10000
+
+func SetConnMax(value int64) {
+	DefaultConnMax = value
+}
 func SetMode(value string) {
 	switch value {
 	case DebugMode:
