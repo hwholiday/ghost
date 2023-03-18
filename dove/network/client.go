@@ -5,7 +5,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
-	"log"
+	"github.com/rs/zerolog/log"
 	"net"
 	"sync"
 	"time"

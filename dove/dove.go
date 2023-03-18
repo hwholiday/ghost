@@ -5,7 +5,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	api "github.com/hwholiday/ghost/dove/api/dove"
 	"github.com/hwholiday/ghost/dove/network"
-	"log"
+	"github.com/rs/zerolog/log"
 	"net"
 	"sync"
 )
