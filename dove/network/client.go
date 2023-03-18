@@ -6,8 +6,10 @@ import (
 	"encoding/binary"
 	"errors"
 	"github.com/rs/zerolog/log"
+	"io"
 	"net"
-	"sync"
+	"strings"
+	"sync/atomic"
 	"time"
 )
 
@@ -21,11 +23,12 @@ var (
 type conn struct {
 	opts       *options
 	readWriter *bufio.ReadWriter
+	Writer     *io.ReadCloser
 	cache      *Cache
 	stopChan   chan struct{}
 	writerChan chan []byte
 	readChan   chan []byte
-	once       sync.Once
+	isOpen     atomic.Bool
 	tmp        any
 }
 
@@ -46,7 +49,8 @@ func NewConn(opt ...Option) (Conn, error) {
 	c.writerChan = make(chan []byte, c.opts.readChanLen)
 	c.readChan = make(chan []byte, c.opts.witerChanLen)
 	c.cache.Save(IP, c.opts.conn.RemoteAddr().String())
-	c.cache.Save(Identity, c.opts.id)
+	c.cache.Save(Identity, c.opts.identity)
+	c.isOpen.Store(true)
 	go c.readChannel()
 	go c.witerChannel()
 	return c, nil
@@ -57,14 +61,15 @@ func (c *conn) Cache() *Cache {
 }
 
 func (c *conn) Close() {
-	c.once.Do(func() {
+	if c.isOpen.Load() {
+		c.isOpen.Store(false)
 		_ = c.opts.conn.Close()
 		putConn(c)
 		c.stopChan <- struct{}{}
 		close(c.stopChan)
 		close(c.readChan)
 		close(c.writerChan)
-	})
+	}
 }
 
 func (c *conn) Read() (byt []byte, err error) {
@@ -96,8 +101,8 @@ func (c *conn) readChannel() {
 	for {
 		byt, err := c.read()
 		if err != nil {
-			if !errors.Is(err, AlreadyCloseErr) {
-				log.Printf("[Dove] readChannel Close conn id : %s , err: %s ", c.opts.id, err.Error())
+			if !errors.Is(err, AlreadyCloseErr) && !strings.Contains(err.Error(), "use of closed network connection") {
+				log.Printf("[Dove] readChannel Close conn identity : %s , err: %s ", c.opts.identity, err.Error())
 			}
 			c.Close()
 			return
@@ -118,7 +123,7 @@ func (c *conn) witerChannel() {
 		select {
 		case byt := <-c.writerChan:
 			if err := c.witer(byt); err != nil {
-				log.Printf("[Dove] witerChannel id : %s , err: %s ", c.opts.id, err.Error())
+				log.Printf("[Dove] witerChannel identity : %s , err: %s ", c.opts.identity, err.Error())
 			}
 		case <-c.stopChan:
 			return

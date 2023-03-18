@@ -1,10 +1,13 @@
 package network
 
-import "sync"
+import (
+	"encoding/json"
+	"sync"
+)
 
 type Cache struct {
 	mp  sync.Map
-	tmp any
+	tmp string
 }
 
 func NewCache() *Cache {
@@ -36,14 +39,29 @@ func (c *Cache) Int() int {
 	return vStr
 }
 func (c *Cache) clearTmp() {
-	c.tmp = nil
+	c.tmp = ""
 }
 
 func (c *Cache) Result() (any, bool) {
 	return c.load()
 }
 
+func (c *Cache) Map() map[string]any {
+	var result = make(map[string]any)
+	c.mp.Range(func(key, value any) bool {
+		if keyStr, ok := key.(string); ok {
+			result[keyStr] = value
+		}
+		return true
+	})
+	return result
+}
+
 func (c *Cache) String() string {
+	if c.tmp == "" {
+		str, _ := json.Marshal(c.Map())
+		return string(str)
+	}
 	v, ok := c.load()
 	if !ok {
 		return ""

@@ -1,7 +1,6 @@
 package dove
 
 import (
-	"errors"
 	"github.com/golang/protobuf/proto"
 	api "github.com/hwholiday/ghost/dove/api/dove"
 	"github.com/hwholiday/ghost/dove/network"
@@ -14,21 +13,26 @@ type HandleFunc func(cli network.Conn, data *api.Dove)
 type Dove interface {
 	RegisterHandleFunc(id uint64, fn HandleFunc)
 	Accept(opt ...network.Option) error
+	Manage() *manage
 }
 
 type dove struct {
 	rw            sync.RWMutex
-	manger        *manager
+	manage        *manage
 	HandleFuncMap map[uint64]HandleFunc
 }
 
 func NewDove() Dove {
 	h := dove{
-		manger:        Manager(),
+		manage:        newManage(),
 		HandleFuncMap: make(map[uint64]HandleFunc),
 	}
 	setup()
 	return &h
+}
+
+func (h *dove) Manage() *manage {
+	return h.manage
 }
 
 func (h *dove) RegisterHandleFunc(id uint64, fn HandleFunc) {
@@ -56,7 +60,10 @@ func (h *dove) Accept(opt ...network.Option) error {
 		log.Printf("[Dove] Accept NewConn  %s ", err.Error())
 		return err
 	}
-	if err = h.manger.Add(client.Cache().Get(network.Identity).String(), client); err != nil {
+	identity := client.Cache().Get(network.Identity).String()
+	if err = h.manage.Add(identity, client); err != nil {
+		log.Printf("[Dove] Accept Add : %s , err: %s ", identity, err.Error())
+		client.Close()
 		return err
 	}
 	h.triggerHandle(client, DefaultConnAcceptCrcId, nil)
@@ -64,16 +71,13 @@ func (h *dove) Accept(opt ...network.Option) error {
 		for {
 			byt, err := client.Read()
 			if err != nil {
-				h.manger.Del(client.Cache().Get(network.Identity).String())
+				h.manage.Del(client.Cache().Get(network.Identity).String())
 				h.triggerHandle(client, DefaultConnCloseCrcId, nil)
-				if !errors.Is(err, network.AlreadyCloseErr) {
-					log.Printf("[Dove] Accept Read  %s ", err.Error())
-				}
 				return
 			}
 			req, err := parseByt(byt)
 			if err != nil {
-				log.Printf("[Dove] Accept parseByt  %s ", err.Error())
+				log.Printf("[Dove] Accept parseByt : %s , err: %s ", identity, err.Error())
 				continue
 			}
 			h.triggerHandle(client, req.GetMetadata().GetCrcId(), req)

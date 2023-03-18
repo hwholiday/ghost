@@ -9,18 +9,24 @@ import (
 
 var ErrExceedsLengthLimit = errors.New("exceeds length limit")
 
-type manager struct {
+type manage struct {
 	maxConn int64
 	connNum int64
 	connMap sync.Map
 }
 
-func Manager() *manager {
-	return &manager{maxConn: DefaultConnMax}
+func newManage() *manage {
+	return &manage{maxConn: DefaultConnMax}
+}
+func (m *manage) Full() bool {
+	if m.GetConnNum() >= m.maxConn {
+		return true
+	}
+	return false
 }
 
-func (m *manager) Add(identity string, conn network.Conn) error {
-	if m.GetConnNum() >= m.maxConn {
+func (m *manage) Add(identity string, conn network.Conn) error {
+	if m.Full() {
 		return ErrExceedsLengthLimit
 	}
 	if old, ok := m.GetConn(identity); ok {
@@ -33,7 +39,7 @@ func (m *manager) Add(identity string, conn network.Conn) error {
 	return nil
 }
 
-func (m *manager) Del(identity string) {
+func (m *manage) Del(identity string) {
 	if _, ok := m.connMap.Load(identity); !ok {
 		return
 	}
@@ -41,11 +47,18 @@ func (m *manager) Del(identity string) {
 	m.connMap.Delete(identity)
 }
 
-func (m *manager) GetConnNum() int64 {
+func (m *manage) GetConnNum() int64 {
 	return atomic.LoadInt64(&m.connNum)
 }
 
-func (m *manager) GetConn(identity string) (network.Conn, bool) {
+func (m *manage) GetMapStatus() map[string]interface{} {
+	var result = make(map[string]interface{}, 2)
+	result["connNum"] = m.GetConnNum()
+	result["maxNum"] = m.maxConn
+	return result
+}
+
+func (m *manage) GetConn(identity string) (network.Conn, bool) {
 	val, ok := m.connMap.Load(identity)
 	if !ok {
 		return nil, false
@@ -53,7 +66,7 @@ func (m *manager) GetConn(identity string) (network.Conn, bool) {
 	return val.(network.Conn), true
 }
 
-func (m *manager) GetAllConn() []network.Conn {
+func (m *manage) GetAllConn() []network.Conn {
 	var clientArr = make([]network.Conn, 0, m.GetConnNum())
 	m.connMap.Range(func(key, value any) bool {
 		clientArr = append(clientArr, value.(network.Conn))

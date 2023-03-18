@@ -6,7 +6,7 @@ import (
 
 const (
 	IP       = "ip"       // 链接的IP地址
-	Identity = "identity" // 链接的UUID
+	Identity = "identity" // 链接的ID
 )
 
 type Conn interface {

@@ -11,7 +11,7 @@ import (
 type Option func(*options)
 
 type options struct {
-	id                string
+	identity          string
 	conn              net.Conn
 	useBigEndian      bool
 	endian            binary.ByteOrder
@@ -72,15 +72,15 @@ func WithLength(length int) Option {
 	}
 }
 
-func WithID(id string) Option {
+func WithIdentity(identity string) Option {
 	return func(o *options) {
-		o.id = id
+		o.identity = identity
 	}
 }
 
 func newOptions(opts ...Option) (*options, error) {
 	o := &options{
-		id:                uuid.New().String(),
+		identity:          uuid.New().String(),
 		witerBufferSize:   4096,
 		readBufferSize:    4096,
 		witerChanLen:      1,
