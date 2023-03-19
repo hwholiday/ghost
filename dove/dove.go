@@ -60,8 +60,8 @@ func (h *dove) Accept(opt ...network.Option) error {
 		log.Printf("[Dove] Accept NewConn  %s ", err.Error())
 		return err
 	}
-	identity := client.Cache().Get(network.Identity).String()
-	if err = h.manage.Add(identity, client); err != nil {
+	identity := client.Identity()
+	if err = h.manage.Add(client); err != nil {
 		log.Printf("[Dove] Accept Add : %s , err: %s ", identity, err.Error())
 		client.Close()
 		return err
@@ -71,7 +71,7 @@ func (h *dove) Accept(opt ...network.Option) error {
 		for {
 			byt, err := client.Read()
 			if err != nil {
-				h.manage.Del(client.Cache().Get(network.Identity).String())
+				h.manage.Del(client.Identity())
 				h.triggerHandle(client, DefaultConnCloseCrcId, nil)
 				return
 			}

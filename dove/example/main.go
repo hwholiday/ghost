@@ -22,14 +22,20 @@ var client dove.Dove
 
 func main() {
 	dove.SetMode(dove.DebugMode)
-	dove.SetConnMax(1)
+	dove.SetConnMax(100)
 	client = dove.NewDove()
 	client.RegisterHandleFunc(dove.DefaultConnAcceptCrcId, func(cli network.Conn, data *api.Dove) {
-		log.Info().Any("cache map", cli.Cache().String()).Send()
 		log.Info().Str("Identity", cli.Cache().Get(network.Identity).String()).Msg("设备上线")
+		for _, v := range client.Manage().FindConnByGroup("user-001") {
+			//_ = v.Write([]byte("succeed"))
+			log.Info().Str("group", "user-001").Str("identity", v.Identity()).Msg("FindConnByGroup succeed")
+		}
 	})
 	client.RegisterHandleFunc(dove.DefaultConnCloseCrcId, func(cli network.Conn, data *api.Dove) {
 		log.Info().Str("Identity", cli.Cache().Get(network.Identity).String()).Msg("设备离线")
+		for _, v := range client.Manage().FindConnByGroup("user-001") {
+			log.Info().Str("group", "user-001").Str("identity", v.Identity()).Msg("FindConnByGroup succeed")
+		}
 	})
 	Listen()
 }
@@ -57,7 +63,7 @@ func HandleSocketForWs(res http.ResponseWriter, req *http.Request) {
 		log.Error().Err(err).Msg("Upgrade failed")
 		return
 	}
-	err = client.Accept(network.WithConn(wsConn.UnderlyingConn()))
+	err = client.Accept(network.WithConn(wsConn.UnderlyingConn()), network.WithGroup("user-001"))
 	if err != nil {
 		log.Error().Err(err).Msg("Accept failed")
 	}

@@ -6,7 +6,6 @@ import (
 	"encoding/binary"
 	"errors"
 	"github.com/rs/zerolog/log"
-	"io"
 	"net"
 	"strings"
 	"sync/atomic"
@@ -23,7 +22,6 @@ var (
 type conn struct {
 	opts       *options
 	readWriter *bufio.ReadWriter
-	Writer     *io.ReadCloser
 	cache      *Cache
 	stopChan   chan struct{}
 	writerChan chan []byte
@@ -48,12 +46,27 @@ func NewConn(opt ...Option) (Conn, error) {
 	c.cache = NewCache()
 	c.writerChan = make(chan []byte, c.opts.readChanLen)
 	c.readChan = make(chan []byte, c.opts.witerChanLen)
-	c.cache.Save(IP, c.opts.conn.RemoteAddr().String())
 	c.cache.Save(Identity, c.opts.identity)
+	c.cache.Save(Group, c.opts.group)
 	c.isOpen.Store(true)
 	go c.readChannel()
 	go c.witerChannel()
 	return c, nil
+}
+
+func (c *conn) Identity() string {
+	return c.cache.Get(Identity).String()
+}
+func (c *conn) Group() string {
+	return c.cache.Get(Group).String()
+}
+
+func (c *conn) RemoteAddr() string {
+	return c.opts.conn.RemoteAddr().String()
+}
+
+func (c *conn) LocalAddr() string {
+	return c.opts.conn.LocalAddr().String()
 }
 
 func (c *conn) Cache() *Cache {
@@ -107,7 +120,7 @@ func (c *conn) readChannel() {
 			c.Close()
 			return
 		}
-		if c.opts.autoHeartbeat {
+		if c.opts.autoResetConnDeadline {
 			_ = c.ResetConnDeadline()
 		}
 		select {

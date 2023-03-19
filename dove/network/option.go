@@ -11,17 +11,18 @@ import (
 type Option func(*options)
 
 type options struct {
-	identity          string
-	conn              net.Conn
-	useBigEndian      bool
-	endian            binary.ByteOrder
-	length            int
-	readBufferSize    int
-	witerBufferSize   int
-	witerChanLen      int
-	readChanLen       int
-	heartbeatInterval time.Duration
-	autoHeartbeat     bool
+	identity              string
+	group                 string
+	conn                  net.Conn
+	useBigEndian          bool
+	endian                binary.ByteOrder
+	length                int
+	readBufferSize        int
+	witerBufferSize       int
+	witerChanLen          int
+	readChanLen           int
+	heartbeatInterval     time.Duration
+	autoResetConnDeadline bool
 }
 
 func WithConn(conn net.Conn) Option {
@@ -30,9 +31,9 @@ func WithConn(conn net.Conn) Option {
 	}
 }
 
-func WithAutoHeartbeat(auto bool) Option {
+func WithAutoResetConnDeadline(auto bool) Option {
 	return func(o *options) {
-		o.autoHeartbeat = auto
+		o.autoResetConnDeadline = auto
 	}
 }
 
@@ -77,18 +78,23 @@ func WithIdentity(identity string) Option {
 		o.identity = identity
 	}
 }
+func WithGroup(group string) Option {
+	return func(o *options) {
+		o.group = group
+	}
+}
 
 func newOptions(opts ...Option) (*options, error) {
 	o := &options{
-		identity:          uuid.New().String(),
-		witerBufferSize:   4096,
-		readBufferSize:    4096,
-		witerChanLen:      1,
-		readChanLen:       1,
-		length:            8,
-		heartbeatInterval: time.Second * 30,
-		useBigEndian:      true,
-		autoHeartbeat:     true,
+		identity:              uuid.New().String(),
+		witerBufferSize:       4096,
+		readBufferSize:        4096,
+		witerChanLen:          1,
+		readChanLen:           1,
+		length:                8,
+		heartbeatInterval:     time.Second * 30,
+		useBigEndian:          true,
+		autoResetConnDeadline: true,
 	}
 	for _, opt := range opts {
 		opt(o)
