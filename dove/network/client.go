@@ -149,15 +149,15 @@ func (c *conn) read() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	var length int
+	var length int64
 	if err = binary.Read(bytes.NewReader(lengthByte), c.opts.endian, &length); err != nil {
 		return nil, MayBeCloseErr
 	}
 
-	if c.readWriter.Reader.Buffered() < int(c.opts.length+length) {
+	if c.readWriter.Reader.Buffered() < c.opts.length+int(length) {
 		return nil, errors.New("the corresponding data cannot be read")
 	}
-	pack := make([]byte, int(c.opts.length+length))
+	pack := make([]byte, c.opts.length+int(length))
 
 	if _, err = c.readWriter.Reader.Read(pack); err != nil {
 		return nil, err
