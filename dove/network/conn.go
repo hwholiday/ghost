@@ -1,6 +1,7 @@
 package network
 
 import (
+	"github.com/gorilla/websocket"
 	"net"
 )
 
@@ -15,6 +16,7 @@ type Conn interface {
 	RemoteAddr() string
 	LocalAddr() string
 	Conn() net.Conn
+	WsConn() *websocket.Conn
 	Read() (byt []byte, err error)
 	Write(byt []byte) error
 	Cache() *Cache

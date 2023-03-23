@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
+	"github.com/gorilla/websocket"
 	"github.com/rs/zerolog/log"
 	"net"
 	"strings"
@@ -27,7 +28,6 @@ type conn struct {
 	writerChan chan []byte
 	readChan   chan []byte
 	isOpen     atomic.Bool
-	tmp        any
 }
 
 func NewConn(opt ...Option) (Conn, error) {
@@ -35,7 +35,7 @@ func NewConn(opt ...Option) (Conn, error) {
 		err error
 		c   = getConn()
 	)
-	c.opts, err = newOptions(opt...)
+	c.opts, err = NewOptions(opt...)
 	if err != nil {
 		return nil, err
 	}
@@ -52,6 +52,9 @@ func NewConn(opt ...Option) (Conn, error) {
 	go c.readChannel()
 	go c.witerChannel()
 	return c, nil
+}
+func (c *conn) WsConn() *websocket.Conn {
+	return nil
 }
 
 func (c *conn) Identity() string {
@@ -98,7 +101,7 @@ func (c *conn) Conn() net.Conn {
 	return c.opts.conn
 }
 func (c *conn) ResetConnDeadline() error {
-	return c.opts.conn.SetDeadline(time.Now().Add(c.opts.heartbeatInterval))
+	return c.opts.conn.SetReadDeadline(time.Now().Add(c.opts.heartbeatInterval))
 }
 
 func (c *conn) Write(byt []byte) error {
@@ -149,11 +152,10 @@ func (c *conn) read() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	var length int64
+	var length int32
 	if err = binary.Read(bytes.NewReader(lengthByte), c.opts.endian, &length); err != nil {
 		return nil, MayBeCloseErr
 	}
-
 	if c.readWriter.Reader.Buffered() < c.opts.length+int(length) {
 		return nil, errors.New("the corresponding data cannot be read")
 	}
@@ -167,7 +169,7 @@ func (c *conn) read() ([]byte, error) {
 
 func (c *conn) witer(byt []byte) error {
 	var (
-		length = int64(len(byt))
+		length = int32(len(byt))
 	)
 	if err := binary.Write(c.readWriter.Writer, c.opts.endian, length); err != nil {
 		return err

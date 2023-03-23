@@ -55,10 +55,24 @@ func (h *dove) triggerHandle(client network.Conn, id uint64, data *api.Dove) {
 }
 
 func (h *dove) Accept(opt ...network.Option) error {
-	client, err := network.NewConn(opt...)
+	opts, err := network.NewOptions(opt...)
 	if err != nil {
-		log.Printf("[Dove] Accept NewConn  %s ", err.Error())
 		return err
+	}
+	var client network.Conn
+	if opts.HasConn() {
+		client, err = network.NewConn(opt...)
+		if err != nil {
+			log.Printf("[Dove] Accept NewConn  %s ", err.Error())
+			return err
+		}
+	}
+	if opts.WsConn() {
+		client, err = network.NewWsConn(opt...)
+		if err != nil {
+			log.Printf("[Dove] Accept NewConn  %s ", err.Error())
+			return err
+		}
 	}
 	identity := client.Identity()
 	if err = h.manage.Add(client); err != nil {

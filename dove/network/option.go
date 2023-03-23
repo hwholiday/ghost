@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"github.com/google/uuid"
+	"github.com/gorilla/websocket"
 	"net"
 	"time"
 )
@@ -14,6 +15,7 @@ type options struct {
 	identity              string
 	group                 string
 	conn                  net.Conn
+	wsConn                *websocket.Conn
 	useBigEndian          bool
 	endian                binary.ByteOrder
 	length                int
@@ -28,6 +30,16 @@ type options struct {
 func WithConn(conn net.Conn) Option {
 	return func(o *options) {
 		o.conn = conn
+	}
+}
+func WithWsConn(wsConn *websocket.Conn) Option {
+	return func(o *options) {
+		o.wsConn = wsConn
+	}
+}
+func WithUseBigEndian(useBigEndian bool) Option {
+	return func(o *options) {
+		o.useBigEndian = useBigEndian
 	}
 }
 
@@ -84,14 +96,21 @@ func WithGroup(group string) Option {
 	}
 }
 
-func newOptions(opts ...Option) (*options, error) {
+func (o *options) WsConn() bool {
+	return o.wsConn != nil
+}
+
+func (o *options) HasConn() bool {
+	return o.conn != nil
+}
+func NewOptions(opts ...Option) (*options, error) {
 	o := &options{
 		identity:              uuid.New().String(),
 		witerBufferSize:       4096,
 		readBufferSize:        4096,
 		witerChanLen:          1,
 		readChanLen:           1,
-		length:                8,
+		length:                4,
 		heartbeatInterval:     time.Second * 30,
 		useBigEndian:          true,
 		autoResetConnDeadline: true,
@@ -99,8 +118,13 @@ func newOptions(opts ...Option) (*options, error) {
 	for _, opt := range opts {
 		opt(o)
 	}
-	if o.conn == nil {
+	if o.conn == nil && o.wsConn == nil {
 		return nil, errors.New("conn is nil")
+	}
+	if o.conn != nil && o.wsConn != nil {
+		_ = o.conn.Close()
+		_ = o.wsConn.Close()
+		return nil, errors.New("only support conn or wsConn")
 	}
 	if o.useBigEndian {
 		o.endian = binary.BigEndian

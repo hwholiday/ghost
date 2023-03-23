@@ -16,3 +16,18 @@ func getConn() *conn {
 func putConn(cli *conn) {
 	connPool.Put(cli)
 }
+
+var connWsPool = sync.Pool{
+	New: func() interface{} {
+		return &wsConn{}
+	},
+}
+
+func getWsConn() *wsConn {
+	cli := connWsPool.Get().(*wsConn)
+	return cli
+}
+
+func putWsConn(cli *wsConn) {
+	connWsPool.Put(cli)
+}
