@@ -29,7 +29,6 @@ func main() {
 	client.RegisterHandleFunc(dove.DefaultConnAcceptCrcId, func(cli network.Conn, data *api.Dove) {
 		log.Info().Str("Identity", cli.Cache().Get(network.Identity).String()).Msg("设备上线")
 		for _, v := range client.Manage().FindConnByGroup("user-001") {
-			//v.Write([]byte("1111"))
 			log.Info().Str("group", "user-001").Str("identity", v.Identity()).Msg("FindConnByGroup succeed")
 		}
 	})
@@ -42,7 +41,7 @@ func main() {
 	client.RegisterHandleFunc(3, func(cli network.Conn, data *api.Dove) {
 		logger := log.With().Str("Identity", cli.Cache().Get(network.Identity).String()).Interface("data", data).Logger()
 		logger.Info().Msg("func id 3")
-		res, err := dove.NewBuild().BuildMetadata(data.GetMetadata().GetCrcId(), data.GetMetadata().GetAckId()).BuildDoveBodyOk().Result()
+		res, err := dove.NewDoveRes().Metadata(data.GetMetadata().GetCrcId(), data.GetMetadata().GetAckId()).BodyOk().Result()
 		if err != nil {
 			logger.Error().Err(err).Send()
 			return

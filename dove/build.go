@@ -14,7 +14,7 @@ type build struct {
 	doveBody     *api.DoveBody
 }
 
-func NewBuild() *build {
+func NewDoveRes() *build {
 	return &build{}
 }
 
@@ -32,7 +32,7 @@ func (b *build) Result() ([]byte, error) {
 	return proto.Marshal(&res)
 }
 
-func (b *build) BuildMetadataSeq(seq string) *build {
+func (b *build) MetadataSeq(seq string) *build {
 	if b.doveMetadata != nil {
 		b.doveMetadata.Seq = seq
 	} else {
@@ -44,7 +44,7 @@ func (b *build) BuildMetadataSeq(seq string) *build {
 	return b
 }
 
-func (b *build) BuildMetadata(crcId, ackId uint64) *build {
+func (b *build) Metadata(crcId, ackId uint64) *build {
 	b.doveMetadata = &api.DoveMetadata{
 		CrcId:     crcId,
 		AckId:     ackId,
@@ -54,7 +54,7 @@ func (b *build) BuildMetadata(crcId, ackId uint64) *build {
 	return b
 }
 
-func (b *build) BuildDoveBodyErr(code uint64, msg string) *build {
+func (b *build) BodyErr(code uint64, msg string) *build {
 	b.doveBody = &api.DoveBody{
 		Msg:  msg,
 		Code: code,
@@ -62,7 +62,7 @@ func (b *build) BuildDoveBodyErr(code uint64, msg string) *build {
 	return b
 }
 
-func (b *build) BuildDoveBodyOk(code ...uint64) *build {
+func (b *build) BodyOk(code ...uint64) *build {
 	var c = DefaultDoveBodyCodeOK
 	if len(code) > 1 {
 		c = code[0]
@@ -72,7 +72,7 @@ func (b *build) BuildDoveBodyOk(code ...uint64) *build {
 	}
 	return b
 }
-func (b *build) BuildDoveBodyOkWithData(data []byte, code ...uint64) *build {
+func (b *build) BodyOkWithData(data []byte, code ...uint64) *build {
 	var c = DefaultDoveBodyCodeOK
 	if len(code) > 1 {
 		c = code[0]
