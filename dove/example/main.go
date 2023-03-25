@@ -24,6 +24,7 @@ var client dove.Dove
 func main() {
 	dove.SetMode(dove.DebugMode)
 	dove.SetConnMax(100)
+	dove.DefaultWsPort = ":10888"
 	client = dove.NewDove()
 	client.RegisterHandleFunc(dove.DefaultConnAcceptCrcId, func(cli network.Conn, data *api.Dove) {
 		log.Info().Str("Identity", cli.Cache().Get(network.Identity).String()).Msg("设备上线")
@@ -39,10 +40,14 @@ func main() {
 		}
 	})
 	client.RegisterHandleFunc(3, func(cli network.Conn, data *api.Dove) {
-		log.Info().Str("Identity", cli.Cache().Get(network.Identity).String()).Any("data", data).Msg("方法3")
-		for _, v := range client.Manage().FindConnByGroup("user-001") {
-			log.Info().Str("group", "user-001").Str("identity", v.Identity()).Msg("FindConnByGroup succeed")
+		logger := log.With().Str("Identity", cli.Cache().Get(network.Identity).String()).Interface("data", data).Logger()
+		logger.Info().Msg("func id 3")
+		res, err := dove.NewBuild().BuildMetadata(data.GetMetadata().GetCrcId(), data.GetMetadata().GetAckId()).BuildDoveBodyOk().Result()
+		if err != nil {
+			logger.Error().Err(err).Send()
+			return
 		}
+		_ = cli.Write(res)
 	})
 	Listen()
 }
@@ -55,7 +60,7 @@ func Listen() {
 		_, _ = writer.Write(bytes)
 	})
 	log.Info().Str("addr", ":10888").Msg("example service start succeed")
-	err := http.ListenAndServe(":10888", nil)
+	err := http.ListenAndServe(dove.DefaultWsPort, nil)
 	if err != nil {
 		panic(err)
 	}
