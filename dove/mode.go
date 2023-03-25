@@ -5,9 +5,12 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-const (
-	DefaultWsPort = ":8081"
+var (
+	DefaultWsPort                = ":8081"
+	DefaultConnMax        int64  = 10000
+	DefaultDoveBodyCodeOK uint64 = 200
 )
+
 const (
 	DefaultConnAcceptCrcId uint64 = 1
 	DefaultConnCloseCrcId  uint64 = 2
@@ -19,8 +22,6 @@ const (
 )
 
 var doveMode = ReleaseMode
-
-var DefaultConnMax int64 = 10000
 
 func SetConnMax(value int64) {
 	DefaultConnMax = value
