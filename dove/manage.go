@@ -86,10 +86,15 @@ func (m *manage) loadGroup(group string) []string {
 	return identityArr
 }
 
-func (m *manage) Del(identity string) {
+func (m *manage) Del(identity string, connId ...string) {
 	conn, ok := m.GetConn(identity)
 	if !ok {
 		return
+	}
+	if len(connId) > 0 {
+		if conn.ConnId() != connId[0] {
+			return
+		}
 	}
 	atomic.AddInt64(&m.connNum, -1)
 	m.connMap.Delete(conn.Identity())

@@ -78,7 +78,7 @@ func (h *dove) Accept(opt ...network.Option) error {
 		for {
 			byt, err := client.Read()
 			if err != nil {
-				h.manage.Del(client.Identity())
+				h.manage.Del(client.Identity(), client.ConnId())
 				h.triggerHandle(client, DefaultConnCloseCrcId, nil)
 				return
 			}
