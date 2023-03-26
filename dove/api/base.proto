@@ -8,12 +8,14 @@ message DoveMetadata {
   uint64  ackId = 2;     //回执ID
   string  seq = 3;       //随机数
   int64   timestamp = 4; //时间
+  bytes expand = 5; //扩展参数
 }
 
 message DoveBody {
   bytes   data = 1;    // 数据
   string  msg = 2;     // 描述
   uint64  code = 3;    // 状态码
+  bytes   expand = 4;   //扩展参数
 }
 
 message Dove {
