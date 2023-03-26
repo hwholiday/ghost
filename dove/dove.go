@@ -59,27 +59,27 @@ func (h *dove) Accept(opt ...network.Option) error {
 	if err != nil {
 		return err
 	}
+	if err = h.manage.CanAdd(opts.GetIdentity()); err != nil {
+		log.Printf("[Dove] Accept err %s , please use the close method to close the current connection", err.Error())
+		return err
+	}
 	var client network.Conn
 	if opts.HasConn() {
 		client, err = network.NewConn(opt...)
 		if err != nil {
-			log.Printf("[Dove] Accept NewConn  %s ", err.Error())
+			log.Printf("[Dove] Accept err %s , please use the close method to close the current connection", err.Error())
 			return err
 		}
 	}
-	if opts.WsConn() {
+	if opts.HasWsConn() {
 		client, err = network.NewWsConn(opt...)
 		if err != nil {
-			log.Printf("[Dove] Accept NewConn  %s ", err.Error())
+			log.Printf("[Dove] Accept err %s , please use the close method to close the current connection", err.Error())
 			return err
 		}
 	}
 	identity := client.Identity()
-	if err = h.manage.Add(client); err != nil {
-		log.Printf("[Dove] Accept Add : %s , err: %s ", identity, err.Error())
-		client.Close()
-		return err
-	}
+	h.manage.Add(client)
 	h.triggerHandle(client, DefaultConnAcceptCrcId, nil)
 	go func() {
 		for {

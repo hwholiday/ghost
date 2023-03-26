@@ -9,6 +9,7 @@ import (
 )
 
 var ErrExceedsLengthLimit = errors.New("exceeds length limit")
+var ErrIdentityAlreadyExists = errors.New("identity  already exists")
 
 type manage struct {
 	maxConn  int64
@@ -20,6 +21,7 @@ type manage struct {
 func newManage() *manage {
 	return &manage{maxConn: DefaultConnMax}
 }
+
 func (m *manage) Full() bool {
 	if m.GetConnNum() >= m.maxConn {
 		return true
@@ -27,20 +29,20 @@ func (m *manage) Full() bool {
 	return false
 }
 
-func (m *manage) Add(conn network.Conn) error {
+func (m *manage) CanAdd(identity string) error {
 	if m.Full() {
 		return ErrExceedsLengthLimit
 	}
-	identity := conn.Identity()
-	if old, ok := m.GetConn(identity); ok {
-		//关闭老的链接信息，这里可能是异地登陆
-		old.(network.Conn).Close()
-		m.Del(identity)
+	if _, ok := m.GetConn(identity); ok {
+		return ErrIdentityAlreadyExists
 	}
-	m.connMap.Store(identity, conn)
+	return nil
+}
+
+func (m *manage) Add(conn network.Conn) {
+	m.connMap.Store(conn.Identity(), conn)
 	m.saveGroup(conn)
 	atomic.AddInt64(&m.connNum, 1)
-	return nil
 }
 
 func (m *manage) saveGroup(conn network.Conn) {
@@ -67,7 +69,7 @@ func (m *manage) delGroup(conn network.Conn) {
 		group    = conn.Group()
 	)
 	arr := m.loadGroup(group)
-	if utils.InStrArr(group, arr) {
+	if utils.InStrArr(identity, arr) {
 		m.groupMap.Store(group, utils.DelStrArr(identity, arr))
 	}
 }

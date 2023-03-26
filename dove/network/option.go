@@ -96,8 +96,12 @@ func WithGroup(group string) Option {
 	}
 }
 
-func (o *options) WsConn() bool {
+func (o *options) HasWsConn() bool {
 	return o.wsConn != nil
+}
+
+func (o *options) GetIdentity() string {
+	return o.identity
 }
 
 func (o *options) HasConn() bool {
