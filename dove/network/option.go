@@ -12,6 +12,7 @@ import (
 type Option func(*options)
 
 type options struct {
+	connId                string
 	identity              string
 	group                 string
 	conn                  net.Conn
@@ -110,6 +111,7 @@ func (o *options) HasConn() bool {
 func NewOptions(opts ...Option) (*options, error) {
 	o := &options{
 		identity:              uuid.New().String(),
+		connId:                uuid.New().String(),
 		witerBufferSize:       4096,
 		readBufferSize:        4096,
 		witerChanLen:          1,
@@ -126,8 +128,6 @@ func NewOptions(opts ...Option) (*options, error) {
 		return nil, errors.New("conn is nil")
 	}
 	if o.conn != nil && o.wsConn != nil {
-		_ = o.conn.Close()
-		_ = o.wsConn.Close()
 		return nil, errors.New("only support conn or wsConn")
 	}
 	if o.useBigEndian {

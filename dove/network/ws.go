@@ -27,15 +27,15 @@ type wsConn struct {
 	isOpen     atomic.Bool
 }
 
-func NewWsConn(opt ...Option) (Conn, error) {
+func (c *wsConn) ConnId() string {
+	return c.opts.connId
+}
+
+func NewWsConnWithOpt(opt *options) Conn {
 	var (
-		err error
-		c   = getWsConn()
+		c = getWsConn()
 	)
-	c.opts, err = NewOptions(opt...)
-	if err != nil {
-		return nil, err
-	}
+	c.opts = opt
 	c.stopChan = make(chan struct{})
 	c.cache = NewCache()
 	c.writerChan = make(chan []byte, c.opts.readChanLen)
@@ -45,7 +45,15 @@ func NewWsConn(opt ...Option) (Conn, error) {
 	c.isOpen.Store(true)
 	go c.readChannel()
 	go c.witerChannel()
-	return c, nil
+	return c
+}
+
+func NewWsConn(opt ...Option) (Conn, error) {
+	opts, err := NewOptions(opt...)
+	if err != nil {
+		return nil, err
+	}
+	return NewWsConnWithOpt(opts), nil
 }
 func (c *wsConn) WsConn() *websocket.Conn {
 	return c.WsConn()
@@ -111,18 +119,18 @@ func (c *wsConn) readChannel() {
 	for {
 		messageType, reader, err := c.opts.wsConn.NextReader()
 		if err != nil {
-			log.Printf("[Dove] readChannel NextReader Close wsConn identity : %s , err: %s ", c.opts.identity, err.Error())
+			log.Printf("[Dove] readChannel NextReader Close wsConn id %s , identity : %s , err: %s ", c.opts.connId, c.opts.identity, err.Error())
 			c.Close()
 			return
 		}
 		if messageType != websocket.BinaryMessage {
-			log.Printf("[Dove] readChannel wsConn only support BinaryMessage identity : %s , err: %s ", c.opts.identity)
+			log.Printf("[Dove] readChannel wsConn only support BinaryMessage id %s , identity : %s , err: %s ", c.opts.connId, c.opts.identity, err.Error())
 			c.Close()
 			return
 		}
 		byt, err := c.read(reader)
 		if err != nil {
-			log.Printf("[Dove] readChannel read Close wsConn identity : %s , err: %s ", c.opts.identity, err.Error())
+			log.Printf("[Dove] readChannel read Close wsConn id %s , identity : %s , err: %s ", c.opts.connId, c.opts.identity, err.Error())
 			c.Close()
 			return
 		}
@@ -141,8 +149,8 @@ func (c *wsConn) witerChannel() {
 	for {
 		select {
 		case byt := <-c.writerChan:
-			if err := c.witer(byt); err != nil {
-				log.Printf("[Dove] witerChannel wsConn identity : %s , err: %s ", c.opts.identity, err.Error())
+			if err := c.WiterNoChan(byt); err != nil {
+				log.Printf("[Dove] witerChannel wsConn id %s , identity : %s , err: %s ", c.opts.connId, c.opts.identity, err.Error())
 			}
 		case <-c.stopChan:
 			return
@@ -171,7 +179,7 @@ func (c *wsConn) read(input io.Reader) ([]byte, error) {
 	return pack[c.opts.length:], err
 }
 
-func (c *wsConn) witer(byt []byte) error {
+func (c *wsConn) WiterNoChan(byt []byte) error {
 	var (
 		length = int32(len(byt))
 		pkg    = new(bytes.Buffer)

@@ -16,14 +16,19 @@ type build struct {
 }
 
 func NewDoveRes() *build {
-	return &build{}
+	return &build{
+		dove:         nil,
+		doveMetadata: nil,
+		doveBody:     nil,
+		err:          nil,
+	}
 }
 
 func (b *build) Result() ([]byte, error) {
 	if b.err != nil {
 		return nil, b.err
 	}
-	if b.doveMetadata.GetCrcId() == 0 {
+	if b.doveMetadata.GetAckId() == 0 {
 		return nil, errors.New("metadata is empty")
 	}
 	if b.doveBody.GetCode() == 0 {
@@ -33,6 +38,7 @@ func (b *build) Result() ([]byte, error) {
 		Metadata: b.doveMetadata,
 		Body:     b.doveBody,
 	}
+
 	return proto.Marshal(&res)
 }
 

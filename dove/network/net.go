@@ -30,15 +30,11 @@ type conn struct {
 	isOpen     atomic.Bool
 }
 
-func NewConn(opt ...Option) (Conn, error) {
+func NewConnWithOpt(opt *options) Conn {
 	var (
-		err error
-		c   = getConn()
+		c = getConn()
 	)
-	c.opts, err = NewOptions(opt...)
-	if err != nil {
-		return nil, err
-	}
+	c.opts = opt
 	c.readWriter = bufio.NewReadWriter(
 		bufio.NewReaderSize(c.opts.conn, c.opts.readBufferSize),
 		bufio.NewWriterSize(c.opts.conn, c.opts.witerBufferSize))
@@ -51,7 +47,19 @@ func NewConn(opt ...Option) (Conn, error) {
 	c.isOpen.Store(true)
 	go c.readChannel()
 	go c.witerChannel()
-	return c, nil
+	return c
+}
+
+func NewConn(opt ...Option) (Conn, error) {
+	opts, err := NewOptions(opt...)
+	if err != nil {
+		return nil, err
+	}
+	return NewConnWithOpt(opts), nil
+}
+
+func (c *conn) ConnId() string {
+	return c.opts.connId
 }
 func (c *conn) WsConn() *websocket.Conn {
 	return nil
@@ -118,7 +126,7 @@ func (c *conn) readChannel() {
 		byt, err := c.read()
 		if err != nil {
 			if !errors.Is(err, AlreadyCloseErr) && !strings.Contains(err.Error(), "use of closed network connection") {
-				log.Printf("[Dove] readChannel Close conn identity : %s , err: %s ", c.opts.identity, err.Error())
+				log.Printf("[Dove] readChannel Close conn id %s , identity : %s , err: %s ", c.opts.connId, c.opts.identity, err.Error())
 			}
 			c.Close()
 			return
@@ -138,8 +146,8 @@ func (c *conn) witerChannel() {
 	for {
 		select {
 		case byt := <-c.writerChan:
-			if err := c.witer(byt); err != nil {
-				log.Printf("[Dove] witerChannel identity : %s , err: %s ", c.opts.identity, err.Error())
+			if err := c.WiterNoChan(byt); err != nil {
+				log.Printf("[Dove] witerChannel id %s , identity : %s , err: %s ", c.opts.connId, c.opts.identity, err.Error())
 			}
 		case <-c.stopChan:
 			return
@@ -167,7 +175,7 @@ func (c *conn) read() ([]byte, error) {
 	return pack[c.opts.length:], err
 }
 
-func (c *conn) witer(byt []byte) error {
+func (c *conn) WiterNoChan(byt []byte) error {
 	var (
 		length = int32(len(byt))
 	)

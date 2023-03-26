@@ -11,6 +11,7 @@ const (
 )
 
 type Conn interface {
+	ConnId() string
 	Identity() string
 	Group() string
 	RemoteAddr() string
@@ -19,6 +20,7 @@ type Conn interface {
 	WsConn() *websocket.Conn
 	Read() (byt []byte, err error)
 	Write(byt []byte) error
+	WiterNoChan(byt []byte) error
 	Cache() *Cache
 	Close()
 	ResetConnDeadline() error

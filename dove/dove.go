@@ -57,6 +57,7 @@ func (h *dove) triggerHandle(client network.Conn, id uint64, data *api.Dove) {
 func (h *dove) Accept(opt ...network.Option) error {
 	opts, err := network.NewOptions(opt...)
 	if err != nil {
+		log.Printf("[Dove] Accept err %s , please use the close method to close the current connection", err.Error())
 		return err
 	}
 	if err = h.manage.CanAdd(opts.GetIdentity()); err != nil {
@@ -65,18 +66,10 @@ func (h *dove) Accept(opt ...network.Option) error {
 	}
 	var client network.Conn
 	if opts.HasConn() {
-		client, err = network.NewConn(opt...)
-		if err != nil {
-			log.Printf("[Dove] Accept err %s , please use the close method to close the current connection", err.Error())
-			return err
-		}
+		client = network.NewConnWithOpt(opts)
 	}
 	if opts.HasWsConn() {
-		client, err = network.NewWsConn(opt...)
-		if err != nil {
-			log.Printf("[Dove] Accept err %s , please use the close method to close the current connection", err.Error())
-			return err
-		}
+		client = network.NewWsConnWithOpt(opts)
 	}
 	identity := client.Identity()
 	h.manage.Add(client)
