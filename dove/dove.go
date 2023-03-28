@@ -9,46 +9,58 @@ import (
 )
 
 type HandleFunc func(cli network.Conn, data *api.Dove)
+type EventFunc func(protocol api.EventType, cli network.Conn)
 
 type Dove interface {
-	RegisterHandleFunc(id uint64, fn HandleFunc)
+	RegisterHandleFunc(id int32, fn HandleFunc)
+	CanAccept(identity string) error
 	Accept(opt ...network.Option) error
 	Manage() *manage
+	EventNotify(EventFunc)
 }
 
 type dove struct {
 	rw            sync.RWMutex
 	manage        *manage
-	HandleFuncMap map[uint64]HandleFunc
+	HandleFuncMap map[int32]HandleFunc
+	eventFunc     EventFunc
+}
+
+func (h *dove) EventNotify(eventFunc EventFunc) {
+	h.eventFunc = eventFunc
 }
 
 func NewDove() Dove {
 	h := dove{
 		manage:        newManage(),
-		HandleFuncMap: make(map[uint64]HandleFunc),
+		HandleFuncMap: make(map[int32]HandleFunc),
 	}
 	setup()
 	return &h
+}
+
+func (h *dove) CanAccept(identity string) error {
+	return h.manage.canAdd(identity)
 }
 
 func (h *dove) Manage() *manage {
 	return h.manage
 }
 
-func (h *dove) RegisterHandleFunc(id uint64, fn HandleFunc) {
+func (h *dove) RegisterHandleFunc(id int32, fn HandleFunc) {
 	h.rw.Lock()
 	defer h.rw.Unlock()
 	if _, ok := h.HandleFuncMap[id]; ok {
-		log.Printf("[Dove] RegisterHandleFunc already register id : %d ", id)
+		log.Warn().Int32("id", id).Msg("RegisterHandleFunc already register id")
 		return
 	}
 	h.HandleFuncMap[id] = fn
 }
 
-func (h *dove) triggerHandle(client network.Conn, id uint64, data *api.Dove) {
+func (h *dove) triggerHandle(client network.Conn, id int32, data *api.Dove) {
 	fn, ok := h.HandleFuncMap[id]
 	if !ok {
-		log.Printf("[Dove] accept HandleFuncMap not register id : %d ", id)
+		log.Warn().Int32("id", id).Msg("[Dove] accept HandleFuncMap not register id")
 		return
 	}
 	fn(client, data)
@@ -57,11 +69,9 @@ func (h *dove) triggerHandle(client network.Conn, id uint64, data *api.Dove) {
 func (h *dove) Accept(opt ...network.Option) error {
 	opts, err := network.NewOptions(opt...)
 	if err != nil {
-		log.Printf("[Dove] Accept err %s , please use the close method to close the current connection", err.Error())
 		return err
 	}
-	if err = h.manage.CanAdd(opts.GetIdentity()); err != nil {
-		log.Printf("[Dove] Accept err %s , please use the close method to close the current connection", err.Error())
+	if err = h.manage.canAdd(opts.GetIdentity()); err != nil {
 		return err
 	}
 	var client network.Conn
@@ -71,20 +81,23 @@ func (h *dove) Accept(opt ...network.Option) error {
 	if opts.HasWsConn() {
 		client = network.NewWsConnWithOpt(opts)
 	}
-	identity := client.Identity()
 	h.manage.Add(client)
-	h.triggerHandle(client, DefaultConnAcceptCrcId, nil)
+	if h.eventFunc != nil {
+		h.eventFunc(api.EventType_ConnAccept, client)
+	}
 	go func() {
 		for {
 			byt, err := client.Read()
 			if err != nil {
-				h.manage.Del(client.Identity(), client.ConnId())
-				h.triggerHandle(client, DefaultConnCloseCrcId, nil)
+				h.manage.Del(client.Identity(), client.ConnID())
+				if h.eventFunc != nil {
+					h.eventFunc(api.EventType_ConnClose, client)
+				}
 				return
 			}
 			req, err := parseByt(byt)
 			if err != nil {
-				log.Printf("[Dove] Accept parseByt : %s , err: %s ", identity, err.Error())
+				log.Error().Err(err).Msg("[Dove] accept parseByt failed")
 				continue
 			}
 			h.triggerHandle(client, req.GetMetadata().GetCrcId(), req)

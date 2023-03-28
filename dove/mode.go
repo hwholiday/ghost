@@ -1,19 +1,18 @@
 package dove
 
 import (
+	"github.com/google/uuid"
+	api "github.com/hwholiday/ghost/dove/api/dove"
+	"github.com/hwholiday/ghost/dove/network"
 	"github.com/hwholiday/ghost/utils"
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
 
 var (
-	DefaultWsPort                = ":8081"
-	DefaultConnMax        int64  = 10000
-	DefaultDoveBodyCodeOK uint64 = 200
-)
-
-const (
-	DefaultConnAcceptCrcId uint64 = 1
-	DefaultConnCloseCrcId  uint64 = 2
+	DefaultWsPort               = ":8081"
+	DefaultConnMax        int64 = 10000
+	DefaultDoveBodyCodeOK int32 = 200
 )
 
 const (
@@ -44,4 +43,16 @@ func ModeName() string {
 func setup() {
 	utils.SetUpGlobalZeroLogConf(doveMode == DebugMode)
 	log.Info().Str("dove run mode :", ModeName()).Send()
+}
+
+func Logger(cli network.Conn, data *api.Dove) zerolog.Logger {
+	traceId := data.GetMetadata().GetSeq()
+	if traceId == "" {
+		traceId = uuid.NewString()
+	}
+	logger := log.With().Str("traceID", traceId).Logger()
+	if cli == nil {
+		return logger
+	}
+	return logger.With().Str("connID", cli.ConnID()).Str("identity", cli.Identity()).Str("group", cli.Group()).Logger()
 }

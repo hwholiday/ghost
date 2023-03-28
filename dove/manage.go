@@ -9,7 +9,7 @@ import (
 )
 
 var ErrExceedsLengthLimit = errors.New("exceeds length limit")
-var ErrIdentityAlreadyExists = errors.New("identity  already exists")
+var ErrIdentityAlreadyExists = errors.New("identity already exists")
 
 type manage struct {
 	maxConn  int64
@@ -29,7 +29,7 @@ func (m *manage) Full() bool {
 	return false
 }
 
-func (m *manage) CanAdd(identity string) error {
+func (m *manage) canAdd(identity string) error {
 	if m.Full() {
 		return ErrExceedsLengthLimit
 	}
@@ -92,7 +92,7 @@ func (m *manage) Del(identity string, connId ...string) {
 		return
 	}
 	if len(connId) > 0 {
-		if conn.ConnId() != connId[0] {
+		if conn.ConnID() != connId[0] {
 			return
 		}
 	}

@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"github.com/gorilla/websocket"
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"net"
 	"strings"
@@ -42,8 +43,6 @@ func NewConnWithOpt(opt *options) Conn {
 	c.cache = NewCache()
 	c.writerChan = make(chan []byte, c.opts.readChanLen)
 	c.readChan = make(chan []byte, c.opts.witerChanLen)
-	c.cache.Save(Identity, c.opts.identity)
-	c.cache.Save(Group, c.opts.group)
 	c.isOpen.Store(true)
 	go c.readChannel()
 	go c.witerChannel()
@@ -58,42 +57,44 @@ func NewConn(opt ...Option) (Conn, error) {
 	return NewConnWithOpt(opts), nil
 }
 
-func (c *conn) ConnId() string {
-	return c.opts.connId
+func (c *conn) ConnID() string {
+	return c.opts.connID
 }
 func (c *conn) WsConn() *websocket.Conn {
 	return nil
 }
-
+func (c *conn) logger() zerolog.Logger {
+	return log.With().Str("connID", c.opts.connID).Str("identity", c.opts.identity).Str("group", c.opts.group).Logger()
+}
 func (c *conn) Identity() string {
-	return c.cache.Get(Identity).String()
+	return c.opts.identity
 }
 func (c *conn) Group() string {
-	return c.cache.Get(Group).String()
-}
-
-func (c *conn) RemoteAddr() string {
-	return c.opts.conn.RemoteAddr().String()
-}
-
-func (c *conn) LocalAddr() string {
-	return c.opts.conn.LocalAddr().String()
+	return c.opts.group
 }
 
 func (c *conn) Cache() *Cache {
 	return c.cache
 }
 
-func (c *conn) Close() {
+func (c *conn) Close(byt ...[]byte) {
 	if c.isOpen.Load() {
 		c.isOpen.Store(false)
-		_ = c.opts.conn.Close()
-		putConn(c)
 		c.stopChan <- struct{}{}
 		close(c.stopChan)
 		close(c.readChan)
 		close(c.writerChan)
+		c.witerClose(byt...)
+		_ = c.opts.conn.Close()
+		putConn(c)
 	}
+}
+
+func (c *conn) witerClose(byt ...[]byte) {
+	if len(byt) <= 0 {
+		return
+	}
+	_ = c.witer(byt[0])
 }
 
 func (c *conn) Read() (byt []byte, err error) {
@@ -108,7 +109,7 @@ func (c *conn) Read() (byt []byte, err error) {
 func (c *conn) Conn() net.Conn {
 	return c.opts.conn
 }
-func (c *conn) ResetConnDeadline() error {
+func (c *conn) ResetHeartbeat() error {
 	return c.opts.conn.SetReadDeadline(time.Now().Add(c.opts.heartbeatInterval))
 }
 
@@ -126,13 +127,14 @@ func (c *conn) readChannel() {
 		byt, err := c.read()
 		if err != nil {
 			if !errors.Is(err, AlreadyCloseErr) && !strings.Contains(err.Error(), "use of closed network connection") {
-				log.Printf("[Dove] readChannel Close conn id %s , identity : %s , err: %s ", c.opts.connId, c.opts.identity, err.Error())
+				logger := c.logger()
+				logger.Error().Err(err).Msg("[Dove] conn readChannel failed")
 			}
 			c.Close()
 			return
 		}
-		if c.opts.autoResetConnDeadline {
-			_ = c.ResetConnDeadline()
+		if c.opts.autoHeartbeat {
+			_ = c.ResetHeartbeat()
 		}
 		select {
 		case c.readChan <- byt:
@@ -146,8 +148,9 @@ func (c *conn) witerChannel() {
 	for {
 		select {
 		case byt := <-c.writerChan:
-			if err := c.WiterNoChan(byt); err != nil {
-				log.Printf("[Dove] witerChannel id %s , identity : %s , err: %s ", c.opts.connId, c.opts.identity, err.Error())
+			if err := c.witer(byt); err != nil {
+				logger := c.logger()
+				logger.Error().Err(err).Msg("[Dove] conn witerChannel failed")
 			}
 		case <-c.stopChan:
 			return
@@ -175,7 +178,7 @@ func (c *conn) read() ([]byte, error) {
 	return pack[c.opts.length:], err
 }
 
-func (c *conn) WiterNoChan(byt []byte) error {
+func (c *conn) witer(byt []byte) error {
 	var (
 		length = int32(len(byt))
 	)

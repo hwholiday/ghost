@@ -26,27 +26,26 @@ func main() {
 	dove.SetConnMax(100)
 	dove.DefaultWsPort = ":10888"
 	client = dove.NewDove()
-	client.RegisterHandleFunc(dove.DefaultConnAcceptCrcId, func(cli network.Conn, data *api.Dove) {
-		log.Info().Str("Identity", cli.Cache().Get(network.Identity).String()).Msg("设备上线")
-		for _, v := range client.Manage().FindConnByGroup("user-001") {
-			log.Info().Str("group", "user-001").Str("identity", v.Identity()).Msg("FindConnByGroup succeed")
-		}
-	})
-	client.RegisterHandleFunc(dove.DefaultConnCloseCrcId, func(cli network.Conn, data *api.Dove) {
-		log.Info().Str("Identity", cli.Cache().Get(network.Identity).String()).Msg("设备离线")
-		for _, v := range client.Manage().FindConnByGroup("user-001") {
-			log.Info().Str("group", "user-001").Str("identity", v.Identity()).Msg("FindConnByGroup succeed")
+	client.EventNotify(func(protocol api.EventType, cli network.Conn) {
+		logger := dove.Logger(cli, nil)
+		switch protocol {
+		case api.EventType_ConnAccept:
+			logger.Debug().Msg("设备上线")
+		case api.EventType_ConnClose:
+			logger.Debug().Msg("设备离线")
 		}
 	})
 	client.RegisterHandleFunc(3, func(cli network.Conn, data *api.Dove) {
-		logger := log.With().Str("Identity", cli.Cache().Get(network.Identity).String()).Interface("data", data).Logger()
-		logger.Info().Msg("func id 3")
-		res, err := dove.NewDoveRes().Metadata(data.GetMetadata().GetCrcId(), data.GetMetadata().GetAckId()).BodyOk().Result()
-		if err != nil {
-			logger.Error().Err(err).Send()
-			return
-		}
-		_ = cli.Write(res)
+		logger := dove.Logger(cli, data)
+		logger.Debug().Msg("接收到心跳")
+		resData, _ := dove.NewDoveRes().Metadata(0, 4).BodyOk().Result()
+		_ = cli.Write(resData)
+	})
+	client.RegisterHandleFunc(5, func(cli network.Conn, data *api.Dove) {
+		logger := dove.Logger(cli, data)
+		logger.Debug().Any("data", data).Msg("接收到消息")
+		resData, _ := dove.NewDoveRes().Metadata(0, 6).BodyOk().Result()
+		_ = cli.Write(resData)
 	})
 	Listen()
 }
@@ -74,8 +73,26 @@ func HandleSocketForWs(res http.ResponseWriter, req *http.Request) {
 		log.Error().Err(err).Msg("Upgrade failed")
 		return
 	}
-	err = client.Accept(network.WithWsConn(wsConn), network.WithGroup("user-001"), network.WithLength(4))
+	if err = client.CanAccept("room-001-user-666"); err != nil {
+		switch err {
+		case dove.ErrExceedsLengthLimit:
+			//连接数已经满了不能再连接
+			_ = wsConn.Close()
+			return
+		case dove.ErrIdentityAlreadyExists:
+			//可能存在异地登录，需要踢掉之前的连接
+			if conn, ok := client.Manage().GetConn("room-001-user-666"); ok {
+				client.Manage().Del(conn.Identity())
+				log.Warn().Str("old", conn.ConnID()).Msg("可能存在异地登录，需要踢掉之前的连接")
+				resData, _ := dove.NewDoveRes().Metadata(0, 8).BodyOk().Result()
+				conn.Close(resData)
+			}
+		default:
+			log.Warn().Msg("unknown error type")
+		}
+	}
+	err = client.Accept(network.WithWsConn(wsConn), network.WithIdentity("room-001-user-666"), network.WithGroup("room-001"), network.WithLength(4))
 	if err != nil {
-		log.Error().Err(err).Msg("Accept failed")
+		log.Error().Err(err).Msg("accept failed")
 	}
 }

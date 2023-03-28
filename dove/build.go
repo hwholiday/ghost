@@ -57,7 +57,7 @@ func (b *build) MetadataSeq(seq string) *build {
 	return b
 }
 
-func (b *build) Metadata(crcId, ackId uint64) *build {
+func (b *build) Metadata(crcId, ackId int32) *build {
 	if b.err != nil {
 		return b
 	}
@@ -90,7 +90,7 @@ func (b *build) BodyMsg(msg string) *build {
 	return b
 }
 
-func (b *build) BodyOk(code ...uint64) *build {
+func (b *build) BodyOk(code ...int32) *build {
 	if b.err != nil {
 		return b
 	}
@@ -101,7 +101,7 @@ func (b *build) BodyOk(code ...uint64) *build {
 	return b.BodyCode(c)
 }
 
-func (b *build) BodyCode(code uint64) *build {
+func (b *build) BodyCode(code int32) *build {
 	if b.err != nil {
 		return b
 	}

@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"github.com/gorilla/websocket"
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"io"
 	"net"
@@ -27,8 +28,11 @@ type wsConn struct {
 	isOpen     atomic.Bool
 }
 
-func (c *wsConn) ConnId() string {
-	return c.opts.connId
+func (c *wsConn) ConnID() string {
+	return c.opts.connID
+}
+func (c *wsConn) logger() zerolog.Logger {
+	return log.With().Str("connID", c.opts.connID).Str("identity", c.opts.identity).Str("group", c.opts.group).Logger()
 }
 
 func NewWsConnWithOpt(opt *options) Conn {
@@ -40,8 +44,6 @@ func NewWsConnWithOpt(opt *options) Conn {
 	c.cache = NewCache()
 	c.writerChan = make(chan []byte, c.opts.readChanLen)
 	c.readChan = make(chan []byte, c.opts.witerChanLen)
-	c.cache.Save(Identity, c.opts.identity)
-	c.cache.Save(Group, c.opts.group)
 	c.isOpen.Store(true)
 	go c.readChannel()
 	go c.witerChannel()
@@ -60,34 +62,33 @@ func (c *wsConn) WsConn() *websocket.Conn {
 }
 
 func (c *wsConn) Identity() string {
-	return c.cache.Get(Identity).String()
+	return c.opts.identity
 }
 func (c *wsConn) Group() string {
-	return c.cache.Get(Group).String()
-}
-
-func (c *wsConn) RemoteAddr() string {
-	return c.opts.wsConn.RemoteAddr().String()
-}
-
-func (c *wsConn) LocalAddr() string {
-	return c.opts.wsConn.LocalAddr().String()
+	return c.opts.group
 }
 
 func (c *wsConn) Cache() *Cache {
 	return c.cache
 }
 
-func (c *wsConn) Close() {
+func (c *wsConn) Close(byt ...[]byte) {
 	if c.isOpen.Load() {
 		c.isOpen.Store(false)
-		_ = c.opts.wsConn.Close()
-		putWsConn(c)
 		c.stopChan <- struct{}{}
 		close(c.stopChan)
 		close(c.readChan)
 		close(c.writerChan)
+		c.witerClose(byt...)
+		_ = c.opts.wsConn.Close()
+		putWsConn(c)
 	}
+}
+func (c *wsConn) witerClose(byt ...[]byte) {
+	if len(byt) <= 0 {
+		return
+	}
+	_ = c.witer(byt[0])
 }
 
 func (c *wsConn) Read() (byt []byte, err error) {
@@ -102,7 +103,7 @@ func (c *wsConn) Read() (byt []byte, err error) {
 func (c *wsConn) Conn() net.Conn {
 	return nil
 }
-func (c *wsConn) ResetConnDeadline() error {
+func (c *wsConn) ResetHeartbeat() error {
 	return c.opts.wsConn.SetReadDeadline(time.Now().Add(c.opts.heartbeatInterval))
 }
 
@@ -117,25 +118,28 @@ func (c *wsConn) Write(byt []byte) error {
 
 func (c *wsConn) readChannel() {
 	for {
+		logger := c.logger()
 		messageType, reader, err := c.opts.wsConn.NextReader()
 		if err != nil {
-			log.Printf("[Dove] readChannel NextReader Close wsConn id %s , identity : %s , err: %s ", c.opts.connId, c.opts.identity, err.Error())
+			logger.Error().Err(err).Msg("[Dove] ws conn readChannel NextReader failed")
 			c.Close()
 			return
 		}
 		if messageType != websocket.BinaryMessage {
-			log.Printf("[Dove] readChannel wsConn only support BinaryMessage id %s , identity : %s , err: %s ", c.opts.connId, c.opts.identity, err.Error())
+			logger.Error().Msg("[Dove] ws conn readChannel only support BinaryMessage failed")
+
+			log.Printf("[Dove] readChannel wsConn only support BinaryMessage id %s , identity : %s , err: %s ", c.opts.connID, c.opts.identity, err.Error())
 			c.Close()
 			return
 		}
 		byt, err := c.read(reader)
 		if err != nil {
-			log.Printf("[Dove] readChannel read Close wsConn id %s , identity : %s , err: %s ", c.opts.connId, c.opts.identity, err.Error())
+			logger.Error().Msg("[Dove] ws conn readChannel read failed")
 			c.Close()
 			return
 		}
-		if c.opts.autoResetConnDeadline {
-			_ = c.ResetConnDeadline()
+		if c.opts.autoHeartbeat {
+			_ = c.ResetHeartbeat()
 		}
 		select {
 		case c.readChan <- byt:
@@ -149,8 +153,9 @@ func (c *wsConn) witerChannel() {
 	for {
 		select {
 		case byt := <-c.writerChan:
-			if err := c.WiterNoChan(byt); err != nil {
-				log.Printf("[Dove] witerChannel wsConn id %s , identity : %s , err: %s ", c.opts.connId, c.opts.identity, err.Error())
+			if err := c.witer(byt); err != nil {
+				logger := c.logger()
+				logger.Error().Err(err).Msg("[Dove] ws conn witerChannel failed")
 			}
 		case <-c.stopChan:
 			return
@@ -179,7 +184,7 @@ func (c *wsConn) read(input io.Reader) ([]byte, error) {
 	return pack[c.opts.length:], err
 }
 
-func (c *wsConn) WiterNoChan(byt []byte) error {
+func (c *wsConn) witer(byt []byte) error {
 	var (
 		length = int32(len(byt))
 		pkg    = new(bytes.Buffer)

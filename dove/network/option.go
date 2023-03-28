@@ -12,20 +12,20 @@ import (
 type Option func(*options)
 
 type options struct {
-	connId                string
-	identity              string
-	group                 string
-	conn                  net.Conn
-	wsConn                *websocket.Conn
-	useBigEndian          bool
-	endian                binary.ByteOrder
-	length                int
-	readBufferSize        int
-	witerBufferSize       int
-	witerChanLen          int
-	readChanLen           int
-	heartbeatInterval     time.Duration
-	autoResetConnDeadline bool
+	connID            string
+	identity          string
+	group             string
+	conn              net.Conn
+	wsConn            *websocket.Conn
+	useBigEndian      bool
+	endian            binary.ByteOrder
+	length            int
+	readBufferSize    int
+	witerBufferSize   int
+	witerChanLen      int
+	readChanLen       int
+	heartbeatInterval time.Duration
+	autoHeartbeat     bool
 }
 
 func WithConn(conn net.Conn) Option {
@@ -44,9 +44,9 @@ func WithUseBigEndian(useBigEndian bool) Option {
 	}
 }
 
-func WithAutoResetConnDeadline(auto bool) Option {
+func WithAutoHeartbeat(auto bool) Option {
 	return func(o *options) {
-		o.autoResetConnDeadline = auto
+		o.autoHeartbeat = auto
 	}
 }
 
@@ -110,16 +110,16 @@ func (o *options) HasConn() bool {
 }
 func NewOptions(opts ...Option) (*options, error) {
 	o := &options{
-		identity:              uuid.New().String(),
-		connId:                uuid.New().String(),
-		witerBufferSize:       4096,
-		readBufferSize:        4096,
-		witerChanLen:          1,
-		readChanLen:           1,
-		length:                4,
-		heartbeatInterval:     time.Second * 30,
-		useBigEndian:          true,
-		autoResetConnDeadline: true,
+		identity:          uuid.New().String(),
+		connID:            uuid.New().String(),
+		witerBufferSize:   4096,
+		readBufferSize:    4096,
+		witerChanLen:      1,
+		readChanLen:       1,
+		length:            4,
+		heartbeatInterval: time.Second * 30,
+		useBigEndian:      true,
+		autoHeartbeat:     true,
 	}
 	for _, opt := range opts {
 		opt(o)
