@@ -21,6 +21,14 @@ var wsUpgrader = websocket.Upgrader{
 
 var client dove.Dove
 
+const (
+	MessageType_AckIDRemoteLogin int32 = 3
+	MessageType_CrcIDHeartbeat   int32 = 10
+	MessageType_AckIDHeartbeat   int32 = 11
+	MessageType_CrcIDSingleChat  int32 = 12
+	MessageType_AckIDSingleChat  int32 = 13
+)
+
 func main() {
 	dove.SetMode(dove.DebugMode)
 	dove.SetConnMax(100)
@@ -35,16 +43,16 @@ func main() {
 			logger.Debug().Msg("设备离线")
 		}
 	})
-	client.RegisterHandleFunc(3, func(cli network.Conn, data *api.Dove) {
+	client.RegisterHandleFunc(MessageType_CrcIDHeartbeat, func(cli network.Conn, data *api.Dove) {
 		logger := dove.Logger(cli, data)
 		logger.Debug().Msg("接收到心跳")
-		resData, _ := dove.NewDoveRes().Metadata(0, 4).BodyOk().Result()
+		resData, _ := dove.NewDoveRes().Metadata(data.GetMetadata().GetCrcId(), MessageType_AckIDHeartbeat).BodyOk().Result()
 		_ = cli.Write(resData)
 	})
-	client.RegisterHandleFunc(5, func(cli network.Conn, data *api.Dove) {
+	client.RegisterHandleFunc(MessageType_CrcIDSingleChat, func(cli network.Conn, data *api.Dove) {
 		logger := dove.Logger(cli, data)
 		logger.Debug().Any("data", data).Msg("接收到消息")
-		resData, _ := dove.NewDoveRes().Metadata(0, 6).BodyOk().Result()
+		resData, _ := dove.NewDoveRes().Metadata(data.GetMetadata().GetCrcId(), MessageType_AckIDSingleChat).BodyOk().Result()
 		_ = cli.Write(resData)
 	})
 	Listen()
@@ -57,7 +65,7 @@ func Listen() {
 		bytes, _ := json.Marshal(obj)
 		_, _ = writer.Write(bytes)
 	})
-	log.Info().Str("addr", ":10888").Msg("example service start succeed")
+	log.Info().Str("addr", dove.DefaultWsPort).Msg("example service start succeed")
 	err := http.ListenAndServe(dove.DefaultWsPort, nil)
 	if err != nil {
 		panic(err)
@@ -84,7 +92,7 @@ func HandleSocketForWs(res http.ResponseWriter, req *http.Request) {
 			if conn, ok := client.Manage().GetConn("room-001-user-666"); ok {
 				client.Manage().Del(conn.Identity())
 				log.Warn().Str("old", conn.ConnID()).Msg("可能存在异地登录，需要踢掉之前的连接")
-				resData, _ := dove.NewDoveRes().Metadata(0, 8).BodyOk().Result()
+				resData, _ := dove.NewDoveRes().MetadataAckId(MessageType_AckIDRemoteLogin).BodyOk().Result()
 				conn.Close(resData)
 			}
 		default:

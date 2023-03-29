@@ -57,6 +57,38 @@ func (b *build) MetadataSeq(seq string) *build {
 	return b
 }
 
+func (b *build) MetadataAckId(ackId int32) *build {
+	if b.err != nil {
+		return b
+	}
+	if b.doveMetadata != nil {
+		b.doveMetadata.AckId = ackId
+	} else {
+		b.doveMetadata = &api.DoveMetadata{
+			AckId:     ackId,
+			Seq:       uuid.NewString(),
+			Timestamp: time.Now().UnixMilli(),
+		}
+	}
+	return b
+}
+
+func (b *build) MetadataCrcId(crcId int32) *build {
+	if b.err != nil {
+		return b
+	}
+	if b.doveMetadata != nil {
+		b.doveMetadata.CrcId = crcId
+	} else {
+		b.doveMetadata = &api.DoveMetadata{
+			CrcId:     crcId,
+			Seq:       uuid.NewString(),
+			Timestamp: time.Now().UnixMilli(),
+		}
+	}
+	return b
+}
+
 func (b *build) Metadata(crcId, ackId int32) *build {
 	if b.err != nil {
 		return b
