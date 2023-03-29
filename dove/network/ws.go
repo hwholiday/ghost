@@ -32,7 +32,7 @@ func (c *wsConn) ConnID() string {
 	return c.opts.connID
 }
 func (c *wsConn) logger() zerolog.Logger {
-	return log.With().Str("connID", c.opts.connID).Str("identity", c.opts.identity).Str("group", c.opts.group).Logger()
+	return log.With().Str("conn-id", c.opts.connID).Str("identity", c.opts.identity).Str("group", c.opts.group).Logger()
 }
 
 func NewWsConnWithOpt(opt *options) Conn {

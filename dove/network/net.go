@@ -64,7 +64,7 @@ func (c *conn) WsConn() *websocket.Conn {
 	return nil
 }
 func (c *conn) logger() zerolog.Logger {
-	return log.With().Str("connID", c.opts.connID).Str("identity", c.opts.identity).Str("group", c.opts.group).Logger()
+	return log.With().Str("conn-id", c.opts.connID).Str("identity", c.opts.identity).Str("group", c.opts.group).Logger()
 }
 func (c *conn) Identity() string {
 	return c.opts.identity

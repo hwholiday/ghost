@@ -50,9 +50,9 @@ func Logger(cli network.Conn, data *api.Dove) zerolog.Logger {
 	if traceId == "" {
 		traceId = uuid.NewString()
 	}
-	logger := log.With().Str("traceID", traceId).Logger()
+	logger := log.With().Str("trace-id", traceId).Logger()
 	if cli == nil {
 		return logger
 	}
-	return logger.With().Str("connID", cli.ConnID()).Str("identity", cli.Identity()).Str("group", cli.Group()).Logger()
+	return logger.With().Str("conn-id", cli.ConnID()).Str("identity", cli.Identity()).Str("group", cli.Group()).Logger()
 }
