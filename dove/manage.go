@@ -16,6 +16,7 @@ type manage struct {
 	connNum  int64
 	connMap  sync.Map
 	groupMap sync.Map
+	mu       sync.Mutex
 }
 
 func newManage() *manage {
@@ -53,6 +54,8 @@ func (m *manage) saveGroup(conn network.Conn) {
 		identity = conn.Identity()
 		group    = conn.Group()
 	)
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	arr := m.loadGroup(group)
 	if !utils.InStrArr(group, arr) {
 		arr = append(arr, identity)
@@ -68,6 +71,8 @@ func (m *manage) delGroup(conn network.Conn) {
 		identity = conn.Identity()
 		group    = conn.Group()
 	)
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	arr := m.loadGroup(group)
 	if utils.InStrArr(identity, arr) {
 		m.groupMap.Store(group, utils.DelStrArr(identity, arr))
@@ -112,14 +117,6 @@ func (m *manage) GetMapStatus() map[string]interface{} {
 	return result
 }
 
-func (m *manage) GetConn(identity string) (network.Conn, bool) {
-	val, ok := m.connMap.Load(identity)
-	if !ok {
-		return nil, false
-	}
-	return val.(network.Conn), true
-}
-
 func (m *manage) FindConnByGroup(group string) []network.Conn {
 	identityArr := m.loadGroup(group)
 	if len(identityArr) <= 0 {
@@ -134,7 +131,15 @@ func (m *manage) FindConnByGroup(group string) []network.Conn {
 	return coonArr
 }
 
-func (m *manage) FindAllConn() []network.Conn {
+func (m *manage) GetConn(identity string) (network.Conn, bool) {
+	val, ok := m.connMap.Load(identity)
+	if !ok {
+		return nil, false
+	}
+	return val.(network.Conn), true
+}
+
+func (m *manage) FindConn() []network.Conn {
 	var clientArr = make([]network.Conn, 0, m.GetConnNum())
 	m.connMap.Range(func(key, value any) bool {
 		clientArr = append(clientArr, value.(network.Conn))
