@@ -54,5 +54,9 @@ func Logger(cli network.Conn, data *api.Dove) zerolog.Logger {
 	if cli == nil {
 		return logger
 	}
-	return logger.With().Str("conn-id", cli.ConnID()).Str("identity", cli.Identity()).Str("group", cli.Group()).Logger()
+	logger = logger.With().Str("conn-id", cli.ConnID()).Str("identity", cli.Identity()).Logger()
+	if cli.Group() != "" {
+		logger = logger.With().Str("group", cli.Group()).Logger()
+	}
+	return logger
 }
