@@ -44,6 +44,8 @@ func NewConnWithOpt(opt *options) Conn {
 	c.writerChan = make(chan []byte, c.opts.readChanLen)
 	c.readChan = make(chan []byte, c.opts.witerChanLen)
 	c.isOpen.Store(true)
+	c.saveCacheByOpts(c.opts)
+
 	go c.readChannel()
 	go c.witerChannel()
 	return c
@@ -57,6 +59,11 @@ func NewConn(opt ...Option) (Conn, error) {
 	return NewConnWithOpt(opts), nil
 }
 
+func (c *conn) saveCacheByOpts(opts *options) {
+	for key, val := range c.opts.cache {
+		c.cache.Save(key, val)
+	}
+}
 func (c *conn) ConnID() string {
 	return c.opts.connID
 }

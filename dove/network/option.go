@@ -26,6 +26,13 @@ type options struct {
 	readChanLen       int
 	heartbeatInterval time.Duration
 	autoHeartbeat     bool
+	cache             map[string]any
+}
+
+func WithCache(cache map[string]any) Option {
+	return func(o *options) {
+		o.cache = cache
+	}
 }
 
 func WithConn(conn net.Conn) Option {
@@ -119,7 +126,8 @@ func NewOptions(opts ...Option) (*options, error) {
 		length:            4,
 		heartbeatInterval: time.Second * 30,
 		useBigEndian:      true,
-		autoHeartbeat:     true,
+		autoHeartbeat:     false,
+		cache:             make(map[string]any),
 	}
 	for _, opt := range opts {
 		opt(o)

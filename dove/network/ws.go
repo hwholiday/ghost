@@ -45,9 +45,16 @@ func NewWsConnWithOpt(opt *options) Conn {
 	c.writerChan = make(chan []byte, c.opts.readChanLen)
 	c.readChan = make(chan []byte, c.opts.witerChanLen)
 	c.isOpen.Store(true)
+	c.saveCacheByOpts(c.opts)
 	go c.readChannel()
 	go c.witerChannel()
 	return c
+}
+
+func (c *wsConn) saveCacheByOpts(opts *options) {
+	for key, val := range c.opts.cache {
+		c.cache.Save(key, val)
+	}
 }
 
 func NewWsConn(opt ...Option) (Conn, error) {
