@@ -98,6 +98,9 @@ func (c *conn) Close(byt ...[]byte) {
 }
 
 func (c *conn) witerClose(byt ...[]byte) {
+	if c.isOpen.Load() {
+		return
+	}
 	if len(byt) <= 0 {
 		return
 	}
@@ -121,6 +124,9 @@ func (c *conn) ResetHeartbeat() error {
 }
 
 func (c *conn) Write(byt []byte) error {
+	if c.isOpen.Load() {
+		return nil
+	}
 	select {
 	case c.writerChan <- byt:
 	case <-c.stopChan:
