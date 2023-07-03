@@ -6,8 +6,7 @@ import (
 )
 
 type Cache struct {
-	mp  sync.Map
-	tmp string
+	mp sync.Map
 }
 
 func NewCache() *Cache {
@@ -18,32 +17,37 @@ func (c *Cache) Save(k string, v any) {
 	c.mp.Store(k, v)
 }
 
-func (c *Cache) Get(k string) *Cache {
-	c.tmp = k
-	return c
-}
-func (c *Cache) load() (any, bool) {
-	defer c.clearTmp()
-	return c.mp.Load(c.tmp)
-}
-
-func (c *Cache) Int() int {
-	v, ok := c.load()
+func (c *Cache) GetString(k string) string {
+	v, ok := c.Result(k)
 	if !ok {
-		return 0
+		return ""
 	}
-	vStr, ok := v.(int)
+	vStr, ok := v.(string)
 	if !ok {
-		return 0
+		return ""
 	}
 	return vStr
 }
-func (c *Cache) clearTmp() {
-	c.tmp = ""
+
+func (c *Cache) GetInt(k string) int {
+	v, ok := c.Result(k)
+	if !ok {
+		return 0
+	}
+	vInt, ok := v.(int)
+	if !ok {
+		return 0
+	}
+	return vInt
 }
 
-func (c *Cache) Result() (any, bool) {
-	return c.load()
+func (c *Cache) Result(k string) (any, bool) {
+	return c.mp.Load(k)
+}
+
+func (c *Cache) String() string {
+	str, _ := json.Marshal(c.Map())
+	return string(str)
 }
 
 func (c *Cache) Map() map[string]any {
@@ -55,20 +59,4 @@ func (c *Cache) Map() map[string]any {
 		return true
 	})
 	return result
-}
-
-func (c *Cache) String() string {
-	if c.tmp == "" {
-		str, _ := json.Marshal(c.Map())
-		return string(str)
-	}
-	v, ok := c.load()
-	if !ok {
-		return ""
-	}
-	vStr, ok := v.(string)
-	if !ok {
-		return ""
-	}
-	return vStr
 }
